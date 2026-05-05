@@ -1539,4 +1539,73 @@ document.getElementById('login-pass').addEventListener('keypress', function (e) 
     }
 });
 </script>
+<script>
+// --- VERİ TABANI VE AYARLAR ---
+let veriler = {
+    cariler: JSON.parse(localStorage.getItem('cariler')) || [],
+    urunler: JSON.parse(localStorage.getItem('urunler')) || [],
+    islemler: JSON.parse(localStorage.getItem('islemler')) || [],
+    kur: { usdtl: 34.50, au_tl: 3150, ag_tl: 38.20 } // Varsayılan başlangıç kurları
+};
+
+// --- SAYFA GEÇİŞ FONKSİYONU ---
+function goPage(pageId, el) {
+    // Tüm sayfaları gizle
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    // Seçilen sayfayı göster
+    document.getElementById('page-' + pageId).classList.add('active');
+    
+    // Menü butonlarının aktiflik durumunu güncelle
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    if(el) el.classList.add('active');
+}
+
+// --- KUR GİRİŞİ VE HESAPLAMA ---
+function syncKurTL() {
+    const usd = parseFloat(document.getElementById('k-usdtl').value) || 0;
+    const au = parseFloat(document.getElementById('k-au-tl').value) || 0;
+    const ag = parseFloat(document.getElementById('k-ag-tl').value) || 0;
+
+    if(usd > 0) {
+        document.getElementById('k-au-usd-disp').value = (au / usd).toFixed(2);
+        document.getElementById('k-ag-usd-disp').value = (ag / usd).toFixed(3);
+    }
+}
+
+function kurKaydet() {
+    veriler.kur.usdtl = parseFloat(document.getElementById('k-usdtl').value);
+    veriler.kur.au_tl = parseFloat(document.getElementById('k-au-tl').value);
+    veriler.kur.ag_tl = parseFloat(document.getElementById('k-ag-tl').value);
+    
+    // Ekrandaki göstergeleri güncelle
+    document.getElementById('sk-usdtl').innerText = veriler.kur.usdtl;
+    document.getElementById('sk-au-tl').innerText = veriler.kur.au_tl;
+    document.getElementById('sk-ag-tl').innerText = veriler.kur.ag_tl;
+    
+    alert("Kurlar başarıyla güncellendi!");
+}
+
+// --- MODAL AÇMA/KAPAMA ---
+function openModal(id) {
+    document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+}
+
+// --- ALIM SATIM TİPİ SEÇİMİ ---
+let islemTipi = 'alim';
+function setTip(tip) {
+    islemTipi = tip;
+    document.getElementById('tip-alim').classList.toggle('active', tip === 'alim');
+    document.getElementById('tip-satim').classList.toggle('active', tip === 'satim');
+    document.getElementById('islem-btn').innerText = tip === 'alim' ? "↓ Alım Kaydet" : "↑ Satım Kaydet";
+}
+
+// Sayfa ilk açıldığında çalışacak başlangıç değerleri
+window.onload = function() {
+    syncKurTL();
+};
+</script>
 </html>
