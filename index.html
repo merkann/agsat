@@ -1513,4 +1513,30 @@ function doLogin() {
 </script>
 
 </body>
+<script>
+// Bu fonksiyon şifre kontrolünü yapar
+function doLogin() {
+    const sifreInput = document.getElementById('login-pass');
+    const hataMesaji = document.getElementById('login-err');
+    const panel = document.getElementById('login-overlay');
+
+    // Varsayılan şifre 1234. Eğer daha önce değiştirdiysen onu hatırlar.
+    const geçerliŞifre = localStorage.getItem('app_pass') || '1234';
+
+    if (sifreInput.value === geçerliŞifre) {
+        panel.style.display = 'none'; // Şifre doğruysa ekranı kapat
+        console.log("Giriş başarılı.");
+    } else {
+        hataMesaji.innerText = "Hatalı şifre! Tekrar deneyin.";
+        sifreInput.value = ""; // Şifreyi temizle
+    }
+}
+
+// "Enter" tuşuna basınca da giriş yapması için:
+document.getElementById('login-pass').addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') {
+        doLogin();
+    }
+});
+</script>
 </html>
