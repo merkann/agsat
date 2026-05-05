@@ -1491,3 +1491,26 @@ document.getElementById('i-tarih').value=today()
 </script>
 </body>
 </html>
+<!-- Mevcut kodlarınızın bittiği yer -->
+
+<script>
+function doLogin() {
+    const inputPass = document.getElementById('login-pass').value;
+    const errorDiv = document.getElementById('login-err');
+    
+    // Tarayıcı hafızasında kayıtlı şifre var mı bak, yoksa varsayılan '1234'
+    const storedPass = localStorage.getItem('app_pass') || '1234';
+
+    if (inputPass === storedPass) {
+        // Şifre doğruysa ekranı kaldır
+        document.getElementById('login-overlay').style.display = 'none';
+    } else {
+        // Şifre yanlışsa hata mesajı ver
+        errorDiv.innerText = "Hatalı şifre!";
+        document.getElementById('login-pass').value = "";
+    }
+}
+</script>
+
+</body>
+</html>
