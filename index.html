@@ -143,6 +143,7 @@ tbody tr:hover td{background:var(--gold-lt)}
 
 /* ŞİFRE EKRANI */
 .login-overlay{position:fixed;inset:0;background:#1A1612;display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column}
+.login-overlay.hidden{display:none!important}
 .login-box{background:#231F1B;border:1px solid #3A3428;border-radius:16px;padding:40px 44px;width:360px;text-align:center}
 .login-logo{font-family:'Cormorant Garamond',serif;font-size:26px;color:#DAA520;margin-bottom:4px}
 .login-sub{font-size:11px;color:#5A4E44;letter-spacing:.12em;text-transform:uppercase;margin-bottom:32px}
@@ -155,6 +156,41 @@ tbody tr:hover td{background:var(--gold-lt)}
 .login-hint{font-size:11px;color:#3A3430;margin-top:14px}
 .settings-btn{position:fixed;bottom:14px;right:14px;background:#231F1B;border:1px solid #3A3428;border-radius:8px;padding:7px 12px;color:#7A6E64;font-size:12px;cursor:pointer;font-family:'DM Sans';z-index:100}
 .settings-btn:hover{color:#DAA520}
+
+
+/* ══ MOBİL / HAMBURGER ══ */
+.hamburger{display:none;position:fixed;top:12px;left:12px;z-index:300;
+  background:#1A1612;border:1px solid #3A3428;border-radius:8px;
+  padding:9px 11px;cursor:pointer;flex-direction:column;gap:5px;align-items:center}
+.hamburger span{display:block;width:20px;height:2px;background:#DAA520;
+  border-radius:2px;transition:all .25s}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0;transform:scaleX(0)}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:49}
+.mob-overlay.open{display:block}
+/* Sidebar kapat düğmesi (mobil içinde) */
+.sb-close{display:none;position:absolute;top:14px;right:14px;background:none;
+  border:none;color:#7A6E64;font-size:20px;cursor:pointer;line-height:1}
+.sb-close:hover{color:#DAA520}
+
+@media(max-width:768px){
+  .hamburger{display:flex}
+  .sidebar{transform:translateX(-100%);transition:transform .25s ease;z-index:200}
+  .sidebar.mob-open{transform:translateX(0)}
+  .sb-close{display:block}
+  .main{margin-left:0;padding:16px 14px;padding-top:56px}
+  .settings-btn{bottom:12px;right:12px;font-size:11px;padding:6px 10px}
+  /* Mobilde bazı grid'leri tek sütuna düşür */
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  /* İşlem sayfasındaki büyük iki sütunlu layout */
+  [style*="grid-template-columns:1fr 380px"]{grid-template-columns:1fr!important}
+  [style*="grid-template-columns:1fr 370px"]{grid-template-columns:1fr!important}
+  /* Tablo overflow */
+  .card{padding:14px}
+  table{font-size:12px}
+  th,td{padding:7px 8px}
+}
 
 </style>
 </head>
@@ -210,13 +246,22 @@ tbody tr:hover td{background:var(--gold-lt)}
 
 <button class="settings-btn" onclick="openModal('modal-sifre')">⚙ Şifre Değiştir</button>
 
+
+<!-- Hamburger menü butonu (mobil) -->
+<button class="hamburger" id="hamburger-btn" onclick="toggleSidebar()" aria-label="Menü">
+  <span></span><span></span><span></span>
+</button>
+<!-- Mobil karartma alanı -->
+<div class="mob-overlay" id="mob-overlay" onclick="closeSidebar()"></div>
+
 <div class="shell">
 
 <!-- SIDEBAR -->
 <aside class="sidebar">
-  <div class="sb-logo">
+  <div class="sb-logo" style="position:relative">
     <div class="sb-logo-title">✦ Altın & Gümüş</div>
     <div class="sb-logo-sub">Yönetim Sistemi</div>
+    <button class="sb-close" onclick="closeSidebar()" aria-label="Kapat">✕</button>
   </div>
   <div class="sb-kur">
     <div class="sb-kur-title">Güncel Kur</div>
@@ -677,6 +722,25 @@ function goPage(id,btn){
   if(id==='cariler') renderCariler()
   if(id==='odemeler'){renderOdemeler();updateOdemeMetrics()}
   if(id==='rapor')   renderRapor()
+  closeSidebar()
+}
+
+function toggleSidebar(){
+  var sb=document.getElementById('hamburger-btn')
+  var sidebar=document.querySelector('.sidebar')
+  var overlay=document.getElementById('mob-overlay')
+  var isOpen=sidebar.classList.contains('mob-open')
+  if(isOpen){ closeSidebar() } else { openSidebar() }
+}
+function openSidebar(){
+  document.querySelector('.sidebar').classList.add('mob-open')
+  document.getElementById('mob-overlay').classList.add('open')
+  document.getElementById('hamburger-btn').classList.add('open')
+}
+function closeSidebar(){
+  document.querySelector('.sidebar').classList.remove('mob-open')
+  document.getElementById('mob-overlay').classList.remove('open')
+  document.getElementById('hamburger-btn').classList.remove('open')
 }
 
 // ══════════════════════ KUR ══════════════════════
@@ -992,7 +1056,7 @@ function renderCariler(){
       <button class="btn btn-outline btn-sm" onclick="cariDuzenle(${c.id})">Düzenle</button>
       <button class="btn btn-danger btn-sm" onclick="cariSil(${c.id})">Sil</button>
     </div></td>
-  </tr>`).join('')
+  </tr>`}).join('')
 }
 
 function resetCariForm(){
@@ -1003,82 +1067,98 @@ function resetCariForm(){
 
 // Bakiyeyi sıfırdan hesapla
 function cariBakiyeHesapla(id){
-  const islemler=ISLEMLER.filter(i=>i.cariId===id)
-  const odemeler=ODEMELER.filter(o=>o.cariId===id)
-  const topAlim=islemler.filter(i=>i.tip==="alim").reduce((s,i)=>s+i.toplamTL,0)
-  const topSatim=islemler.filter(i=>i.tip==="satim").reduce((s,i)=>s+i.toplamTL,0)
-  const topTahsilat=odemeler.filter(o=>o.yon==="tahsilat").reduce((s,o)=>s+o.tutar,0)
-  const topOdeme=odemeler.filter(o=>o.yon==="odeme").reduce((s,o)=>s+o.tutar,0)
-  const alimBakiye=topAlim-topOdeme
-  const satimBakiye=topSatim-topTahsilat
-  const netBakiye=satimBakiye-alimBakiye
-  return {topAlim,topSatim,topTahsilat,topOdeme,alimBakiye,satimBakiye,netBakiye}
+  var islemler=ISLEMLER.filter(function(i){return i.cariId===id})
+  var odemeler=ODEMELER.filter(function(o){return o.cariId===id})
+  var topAlim=islemler.filter(function(i){return i.tip==='alim'}).reduce(function(s,i){return s+i.toplamTL},0)
+  var topSatim=islemler.filter(function(i){return i.tip==='satim'}).reduce(function(s,i){return s+i.toplamTL},0)
+  var topTahsilat=odemeler.filter(function(o){return o.yon==='tahsilat'}).reduce(function(s,o){return s+o.tutar},0)
+  var topOdeme=odemeler.filter(function(o){return o.yon==='odeme'}).reduce(function(s,o){return s+o.tutar},0)
+  var alimBakiye=topAlim-topOdeme
+  var satimBakiye=topSatim-topTahsilat
+  var netBakiye=satimBakiye-alimBakiye
+  return {topAlim:topAlim,topSatim:topSatim,topTahsilat:topTahsilat,topOdeme:topOdeme,alimBakiye:alimBakiye,satimBakiye:satimBakiye,netBakiye:netBakiye}
 }
 
 function cariDetay(id){
-  const c=CARILER.find(x=>x.id===id);if(!c)return
-  const islemler=ISLEMLER.filter(i=>i.cariId===id)
-  const odemeler=ODEMELER.filter(o=>o.cariId===id)
-  const b=cariBakiyeHesapla(id)
+  var c=CARILER.find(function(x){return x.id===id}); if(!c) return
+  var islemler=ISLEMLER.filter(function(i){return i.cariId===id})
+  var odemeler=ODEMELER.filter(function(o){return o.cariId===id})
+  var b=cariBakiyeHesapla(id)
   c.bakiye=b.netBakiye; save()
-  document.getElementById("detay-title").textContent=c.ad
-  document.getElementById("detay-content").innerHTML=`
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
-      <div class="metric" style="border-top:3px solid var(--red)">
-        <div class="metric-val text-red">${fmt(b.topAlim)} ₺</div>
-        <div class="metric-lbl">Toplam Alım</div>
-      </div>
-      <div class="metric" style="border-top:3px solid var(--grn)">
-        <div class="metric-val text-grn">${fmt(b.topSatim)} ₺</div>
-        <div class="metric-lbl">Toplam Satım</div>
-      </div>
-      <div class="metric" style="border-top:3px solid var(--gold)">
-        <div class="metric-val ${b.netBakiye>=0?"text-grn":"text-red"}">${b.netBakiye>=0?"+":"−"} ${fmt(Math.abs(b.netBakiye))} ₺</div>
-        <div class="metric-lbl">Net Bakiye</div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-      <div class="metric">
-        <div style="font-size:11px;color:var(--txt3);margin-bottom:6px;letter-spacing:.05em">ALIM HESABI</div>
-        <div style="font-size:13px;color:var(--txt2);margin-bottom:3px">Toplam Alım: <span class="mono fw5 text-red">${fmt(b.topAlim)} ₺</span></div>
-        <div style="font-size:13px;color:var(--txt2);margin-bottom:3px">Yapılan Ödeme: <span class="mono fw5 text-grn">${fmt(b.topOdeme)} ₺</span></div>
-        <div style="height:1px;background:var(--bd);margin:7px 0"></div>
-        <div style="font-size:13px;font-weight:500">Alım Bakiyesi: <span class="mono ${b.alimBakiye>0?"text-red":"text-grn"}">${b.alimBakiye>0?"Borcumuz":"Kapalı"}: ${fmt(Math.abs(b.alimBakiye))} ₺</span></div>
-      </div>
-      <div class="metric">
-        <div style="font-size:11px;color:var(--txt3);margin-bottom:6px;letter-spacing:.05em">SATIM HESABI</div>
-        <div style="font-size:13px;color:var(--txt2);margin-bottom:3px">Toplam Satım: <span class="mono fw5 text-grn">${fmt(b.topSatim)} ₺</span></div>
-        <div style="font-size:13px;color:var(--txt2);margin-bottom:3px">Tahsilat: <span class="mono fw5 text-red">${fmt(b.topTahsilat)} ₺</span></div>
-        <div style="height:1px;background:var(--bd);margin:7px 0"></div>
-        <div style="font-size:13px;font-weight:500">Satım Bakiyesi: <span class="mono ${b.satimBakiye>0?"text-grn":"text-red"}">${b.satimBakiye>0?"Alacağımız":"Kapalı"}: ${fmt(Math.abs(b.satimBakiye))} ₺</span></div>
-      </div>
-    </div>
-    <div class="section-label" style="margin-bottom:8px">İŞLEMLER (${islemler.length})</div>
-    <div style="overflow-x:auto;margin-bottom:16px">
-    <table><thead><tr><th>Tarih</th><th>Tip</th><th>Metal</th><th>Gram</th><th>Ayar/Mod</th><th>Birim TL</th><th>İşç. TL</th><th>Toplam TL</th><th>USD</th></tr></thead>
-    <tbody>${islemler.length?islemler.map(i=>`<tr>
-      <td style="font-size:12px;color:var(--txt2)">${i.tarih}</td>
-      <td><span class="badge b-${i.tip}">${i.tip==='alim'?'Alım':'Satım'}</span></td>
-      <td><span class="badge b-${i.metal}">${i.metal==='au'?'Au':'Ag'}</span></td>
-      <td class="mono">${fmt(i.gram,2)} gr</td>
-      <td style="color:var(--txt2)">${i.fiyatMod==='kur'?i.ayar+'%':'Direkt'}</td>
-      <td class="mono">${fmt(i.birimTL,2)} ₺</td>
-      <td class="mono">${fmt(i.iscTL,2)} ₺</td>
-      <td class="mono fw5 ${i.tip==='satim'?'text-grn':'text-red'}">${fmt(i.toplamTL,2)} ₺</td>
-      <td class="mono text-muted">${fmt(i.toplamUSD,2)} $</td>
-    </tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--txt3);padding:12px">İşlem yok</td></tr>'}</tbody></table></div>
-    <div class="section-label" style="margin-bottom:8px">ÖDEMELER (${odemeler.length})</div>
-    <table><thead><tr><th>Tarih</th><th>Yön</th><th>Tutar</th><th>Yöntem</th><th>Açıklama</th></tr></thead>
-    <tbody>${odemeler.length?odemeler.map(o=>`<tr>
-      <td style="font-size:12px;color:var(--txt2)">${o.tarih}</td>
-      <td><span class="badge ${o.yon==='tahsilat'?'b-green':'b-red'}">${o.yon==='tahsilat'?'Tahsilat':'Ödeme'}</span></td>
-      <td class="mono fw5 ${o.yon==='tahsilat'?'text-grn':'text-red'}">${fmt(o.tutar)} ₺</td>
-      <td style="color:var(--txt2)">${o.yontem}</td>
-      <td style="color:var(--txt2);font-size:12px">${o.aciklama||'—'}</td>
-    </tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--txt3);padding:12px">Ödeme yok</td></tr>'}</tbody></table>`
-  document.getElementById('detay-excel-btn').onclick=()=>excelCariDetay(id)
+  document.getElementById('detay-title').textContent=c.ad
+
+  var alimBakiyeLabel = b.alimBakiye>0 ? 'Borcumuz' : 'Kapandı'
+  var alimBakiyeClass = b.alimBakiye>0 ? 'text-red' : 'text-grn'
+  var satimBakiyeLabel = b.satimBakiye>0 ? 'Alacağımız' : 'Kapandı'
+  var satimBakiyeClass = b.satimBakiye>0 ? 'text-grn' : 'text-red'
+  var netClass = b.netBakiye>=0 ? 'text-grn' : 'text-red'
+  var netSign = b.netBakiye>=0 ? '+' : '−'
+
+  var islemHTML = islemler.length ? islemler.map(function(i){
+    var tipClass = i.tip==='satim' ? 'text-grn' : 'text-red'
+    var modStr = i.fiyatMod==='kur' ? i.ayar+'%' : 'Direkt'
+    return '<tr><td style="font-size:12px;color:var(--txt2)">'+i.tarih+'</td>'+
+      '<td><span class="badge b-'+i.tip+'">'+(i.tip==='alim'?'Alım':'Satım')+'</span></td>'+
+      '<td><span class="badge b-'+i.metal+'">'+(i.metal==='au'?'Au':'Ag')+'</span></td>'+
+      '<td class="mono">'+fmt(i.gram,2)+' gr</td>'+
+      '<td style="color:var(--txt2)">'+modStr+'</td>'+
+      '<td class="mono">'+fmt(i.birimTL,2)+' ₺</td>'+
+      '<td class="mono">'+fmt(i.iscTL,2)+' ₺</td>'+
+      '<td class="mono fw5 '+tipClass+'">'+fmt(i.toplamTL,2)+' ₺</td>'+
+      '<td class="mono text-muted">'+fmt(i.toplamUSD,2)+' $</td></tr>'
+  }).join('') : '<tr><td colspan="9" style="text-align:center;color:var(--txt3);padding:12px">İşlem yok</td></tr>'
+
+  var odemeHTML = odemeler.length ? odemeler.map(function(o){
+    var yonClass = o.yon==='tahsilat' ? 'text-grn' : 'text-red'
+    var badgeClass = o.yon==='tahsilat' ? 'b-green' : 'b-red'
+    var yonLabel = o.yon==='tahsilat' ? 'Tahsilat' : 'Ödeme'
+    return '<tr><td style="font-size:12px;color:var(--txt2)">'+o.tarih+'</td>'+
+      '<td><span class="badge '+badgeClass+'">'+yonLabel+'</span></td>'+
+      '<td class="mono fw5 '+yonClass+'">'+fmt(o.tutar)+' ₺</td>'+
+      '<td style="color:var(--txt2)">'+o.yontem+'</td>'+
+      '<td style="color:var(--txt2);font-size:12px">'+(o.aciklama||'—')+'</td></tr>'
+  }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--txt3);padding:12px">Ödeme yok</td></tr>'
+
+  document.getElementById('detay-content').innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">'+
+      '<div class="metric" style="border-top:3px solid var(--red)">'+
+        '<div class="metric-val text-red">'+fmt(b.topAlim)+' ₺</div>'+
+        '<div class="metric-lbl">Toplam Alım</div></div>'+
+      '<div class="metric" style="border-top:3px solid var(--grn)">'+
+        '<div class="metric-val text-grn">'+fmt(b.topSatim)+' ₺</div>'+
+        '<div class="metric-lbl">Toplam Satım</div></div>'+
+      '<div class="metric" style="border-top:3px solid var(--gold)">'+
+        '<div class="metric-val '+netClass+'">'+netSign+' '+fmt(Math.abs(b.netBakiye))+' ₺</div>'+
+        '<div class="metric-lbl">Net Bakiye</div></div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'+
+      '<div class="metric">'+
+        '<div style="font-size:11px;color:var(--txt3);margin-bottom:6px;letter-spacing:.05em">ALIM HESABI</div>'+
+        '<div style="font-size:13px;color:var(--txt2);margin-bottom:3px">Toplam Alım: <span class="mono fw5 text-red">'+fmt(b.topAlim)+' ₺</span></div>'+
+        '<div style="font-size:13px;color:var(--txt2);margin-bottom:3px">Yapılan Ödeme: <span class="mono fw5 text-grn">'+fmt(b.topOdeme)+' ₺</span></div>'+
+        '<div style="height:1px;background:var(--bd);margin:7px 0"></div>'+
+        '<div style="font-size:13px;font-weight:500">Alım Bakiyesi: <span class="mono '+alimBakiyeClass+'">'+alimBakiyeLabel+': '+fmt(Math.abs(b.alimBakiye))+' ₺</span></div>'+
+      '</div>'+
+      '<div class="metric">'+
+        '<div style="font-size:11px;color:var(--txt3);margin-bottom:6px;letter-spacing:.05em">SATIM HESABI</div>'+
+        '<div style="font-size:13px;color:var(--txt2);margin-bottom:3px">Toplam Satım: <span class="mono fw5 text-grn">'+fmt(b.topSatim)+' ₺</span></div>'+
+        '<div style="font-size:13px;color:var(--txt2);margin-bottom:3px">Tahsilat: <span class="mono fw5 text-red">'+fmt(b.topTahsilat)+' ₺</span></div>'+
+        '<div style="height:1px;background:var(--bd);margin:7px 0"></div>'+
+        '<div style="font-size:13px;font-weight:500">Satım Bakiyesi: <span class="mono '+satimBakiyeClass+'">'+satimBakiyeLabel+': '+fmt(Math.abs(b.satimBakiye))+' ₺</span></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="section-label" style="margin-bottom:8px">İŞLEMLER ('+islemler.length+')</div>'+
+    '<div style="overflow-x:auto;margin-bottom:16px">'+
+    '<table><thead><tr><th>Tarih</th><th>Tip</th><th>Metal</th><th>Gram</th><th>Mod</th><th>Birim TL</th><th>İşç. TL</th><th>Toplam TL</th><th>USD</th></tr></thead>'+
+    '<tbody>'+islemHTML+'</tbody></table></div>'+
+    '<div class="section-label" style="margin-bottom:8px">ÖDEMELER ('+odemeler.length+')</div>'+
+    '<table><thead><tr><th>Tarih</th><th>Yön</th><th>Tutar</th><th>Yöntem</th><th>Açıklama</th></tr></thead>'+
+    '<tbody>'+odemeHTML+'</tbody></table>'
+
+  document.getElementById('detay-excel-btn').onclick=function(){excelCariDetay(id)}
   openModal('modal-detay')
 }
+
 
 function cariDuzenle(id){
   const c=CARILER.find(x=>x.id===id);if(!c)return
@@ -1416,13 +1496,15 @@ const SIFRE_KEY = 'ag_sifre_v4'
 function getSifre(){ return LS.get(SIFRE_KEY) || '1234' }
 
 function doLogin(){
-  const gir = document.getElementById('login-pass').value
+  const gir = document.getElementById('login-pass').value.trim()
   const err = document.getElementById('login-err')
+  if(!gir){ err.textContent='Şifre giriniz.'; return }
   if(gir === getSifre()){
-    document.getElementById('login-overlay').style.display='none'
+    document.getElementById('login-overlay').classList.add('hidden')
     err.textContent=''
+    document.getElementById('login-pass').value=''
   } else {
-    err.textContent = 'Hatalı şifre, tekrar deneyin.'
+    err.textContent='Hatalı şifre, tekrar deneyin.'
     document.getElementById('login-pass').value=''
     document.getElementById('login-pass').focus()
   }
