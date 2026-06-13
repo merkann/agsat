@@ -252,17 +252,54 @@ tbody tr:hover td{background:var(--gold-lt)}
 
 <!-- İŞLEM DÜZENLE MODAL -->
 <div class="overlay" id="modal-islem-duzenle" onclick="overlayClick(event,'modal-islem-duzenle')">
-  <div class="modal" style="width:480px">
+  <div class="modal modal-wide" style="max-width:700px">
     <h3 class="modal-title">İşlem Düzenle</h3>
     <input type="hidden" id="ie-id">
     <div class="g2">
       <div class="fg"><label>Tarih</label><input type="date" id="ie-tarih"></div>
       <div class="fg"><label>Cari</label><select id="ie-cari"></select></div>
     </div>
-    <div class="fg"><label>Not / Fatura No</label><input type="text" id="ie-not" placeholder="İsteğe bağlı..."></div>
-    <div style="background:var(--surf2);border-radius:var(--r);padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--txt2)">
-      ℹ Tutar ve gram bilgileri değiştirilemez. Sadece tarih, cari ve not güncellenebilir.
+    <div class="g2">
+      <div class="fg"><label>İşlem Tipi</label>
+        <select id="ie-tip">
+          <option value="alim">Alım</option>
+          <option value="satim">Satım</option>
+        </select>
+      </div>
+      <div class="fg"><label>Metal</label>
+        <select id="ie-metal">
+          <option value="au">Altın (Au)</option>
+          <option value="ag">Gümüş (Ag)</option>
+        </select>
+      </div>
     </div>
+    <div id="ie-gram-section">
+      <div class="g3">
+        <div class="fg"><label id="ie-gram-lbl">Gram / Adet</label><input type="number" id="ie-gram" step="0.001" placeholder="0.00"></div>
+        <div class="fg"><label>Ayar (%)</label><input type="number" id="ie-ayar" step="0.1" placeholder="91.6"></div>
+        <div class="fg"><label id="ie-birim-lbl">Birim Fiyat (TL/gr)</label><input type="number" id="ie-birim-tl" step="0.01" placeholder="0.00" oninput="ieDuzenleHesapla()"></div>
+      </div>
+      <div class="g2" style="margin-top:8px">
+        <div class="fg"><label>Birim Fiyat (USD/gr veya USD/adet)</label><input type="number" id="ie-birim-usd" step="0.0001" placeholder="0.00" oninput="ieDuzenleHesapla()"></div>
+        <div class="fg"><label>USD/TL Kuru (işlem anındaki)</label><input type="number" id="ie-usdtl" step="0.01" placeholder="38.45" oninput="ieDuzenleHesapla()"></div>
+      </div>
+    </div>
+    <div class="isc-box" style="margin-top:10px">
+      <div class="isc-title">İşçilik</div>
+      <div class="g2">
+        <div class="fg" style="margin:0"><label>İşçilik TL</label><input type="number" id="ie-isc-tl" step="0.01" value="0" oninput="ieDuzenleHesapla()"></div>
+        <div class="fg" style="margin:0"><label>İşçilik USD</label><input type="number" id="ie-isc-usd" step="0.01" value="0" oninput="ieDuzenleHesapla()"></div>
+      </div>
+    </div>
+    <div class="fg" style="margin-top:10px"><label>Spread TL</label><input type="number" id="ie-spread-tl" step="0.01" value="0" oninput="ieDuzenleHesapla()"></div>
+    <div class="result-box" style="margin-top:10px" id="ie-result-box">
+      <div style="font-size:10px;letter-spacing:.08em;color:var(--txt3);margin-bottom:10px">HESAPLAMA ÖNIZLEMESI</div>
+      <div class="result-row"><span class="lbl">Metal bedeli TL</span><span class="val" id="ie-r-metal-tl">—</span></div>
+      <div class="result-row"><span class="lbl">İşçilik TL</span><span class="val" id="ie-r-isc-tl">—</span></div>
+      <div class="result-row"><span class="lbl">Toplam TL</span><span class="val" id="ie-r-toplam-tl" style="font-size:16px;color:var(--gold)">—</span></div>
+      <div class="result-row"><span class="lbl">Toplam USD</span><span class="val" id="ie-r-toplam-usd">—</span></div>
+    </div>
+    <div class="fg" style="margin-top:10px"><label>Not / Fatura No</label><input type="text" id="ie-not" placeholder="İsteğe bağlı..."></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-islem-duzenle')">İptal</button>
       <button class="btn btn-gold" onclick="islemGuncelle()">Güncelle</button>
@@ -670,6 +707,42 @@ tbody tr:hover td{background:var(--gold-lt)}
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-urun')">İptal</button>
       <button class="btn btn-gold" onclick="urunKaydet()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ÖDEME DÜZENLE MODAL -->
+<div class="overlay" id="modal-odeme-duzenle" onclick="overlayClick(event,'modal-odeme-duzenle')">
+  <div class="modal" style="width:480px">
+    <h3 class="modal-title">Ödeme / Tahsilat Düzenle</h3>
+    <input type="hidden" id="oe-id">
+    <div class="g2">
+      <div class="fg"><label>Tarih</label><input type="date" id="oe-tarih"></div>
+      <div class="fg"><label>Cari</label><select id="oe-cari"><option value="">Seçiniz...</option></select></div>
+    </div>
+    <div class="g2">
+      <div class="fg"><label>Tutar (TL)</label><input type="number" id="oe-tutar" step="0.01"></div>
+      <div class="fg"><label>Yön</label>
+        <select id="oe-yon">
+          <option value="tahsilat">Tahsilat (Gelen ₺)</option>
+          <option value="odeme">Ödeme (Giden ₺)</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label>Ödeme Yöntemi</label>
+      <select id="oe-yontem">
+        <option value="nakit">Nakit</option>
+        <option value="havale">Havale / EFT</option>
+        <option value="kart">Banka / Kredi Kartı</option>
+        <option value="altin">Altın Karşılığı</option>
+        <option value="gumus">Gümüş Karşılığı</option>
+        <option value="cek">Çek / Senet</option>
+      </select>
+    </div>
+    <div class="fg"><label>Açıklama</label><input id="oe-aciklama" placeholder="İsteğe bağlı..."></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-odeme-duzenle')">İptal</button>
+      <button class="btn btn-gold" onclick="odemeDuzenleKaydet()">Güncelle</button>
     </div>
   </div>
 </div>
@@ -1407,7 +1480,10 @@ function renderOdemeler(){
     <td class="mono fw5 ${o.yon==='tahsilat'?'text-grn':'text-red'}">${fmt(o.tutar)} ₺</td>
     <td style="color:var(--txt2)">${o.yontem}</td>
     <td style="color:var(--txt2);font-size:12px">${o.aciklama||'—'}</td>
-    <td class="no-print"><button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="odemeSil(${o.id})">✕</button></td>
+    <td class="no-print" style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="odemeDuzenle(${o.id})" style="margin-right:4px">Düzenle</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="odemeSil(${o.id})">✕</button>
+    </td>
   </tr>`).join('')
 }
 
@@ -1774,35 +1850,154 @@ function islemDuzenle(id){
   document.getElementById('ie-id').value=i.id
   document.getElementById('ie-tarih').value=i.tarih
   document.getElementById('ie-not').value=i.not||''
+  document.getElementById('ie-tip').value=i.tip||'alim'
+  document.getElementById('ie-metal').value=i.metal||'au'
+  document.getElementById('ie-gram').value=i.gram||0
+  document.getElementById('ie-ayar').value=i.ayar||100
+  document.getElementById('ie-birim-tl').value=i.birimTL||0
+  document.getElementById('ie-birim-usd').value=i.birimUSD||0
+  document.getElementById('ie-usdtl').value=i.usdtl||KUR.usdtl
+  document.getElementById('ie-isc-tl').value=i.iscTL||0
+  document.getElementById('ie-isc-usd').value=i.iscUSD||0
+  document.getElementById('ie-spread-tl').value=i.spreadTL||0
+  // Gram label: adet mi gram mı
+  const isAdet=i.birimTipi==='adet'
+  document.getElementById('ie-gram-lbl').textContent=isAdet?'Adet Sayısı':'Gram'
+  document.getElementById('ie-birim-lbl').textContent=isAdet?'Birim Fiyat USD/adet':'Birim Fiyat TL/gr (saf)'
   const sel=document.getElementById('ie-cari')
-  sel.innerHTML=CARILER.map(c=>`<option value="${c.id}" ${c.id===i.cariId?'selected':''}>${c.ad}</option>`).join('')
+  sel.innerHTML=CARILER.map(c=>`<option value="${c.id}" ${c.id===i.cariId?'selected':''} >${c.ad}</option>`).join('')
+  ieDuzenleHesapla()
   openModal('modal-islem-duzenle')
+}
+
+function ieDuzenleHesapla(){
+  const gram=parseFloat(document.getElementById('ie-gram').value)||0
+  const ayar=parseFloat(document.getElementById('ie-ayar').value)||100
+  const birimTL=parseFloat(document.getElementById('ie-birim-tl').value)||0
+  const birimUSD=parseFloat(document.getElementById('ie-birim-usd').value)||0
+  const usdtl=parseFloat(document.getElementById('ie-usdtl').value)||KUR.usdtl
+  const iscTL=parseFloat(document.getElementById('ie-isc-tl').value)||0
+  const iscUSD=parseFloat(document.getElementById('ie-isc-usd').value)||0
+  const spreadTL=parseFloat(document.getElementById('ie-spread-tl').value)||0
+  // Metal bedeli: birimTL > 0 ise TL bazlı, yoksa USD bazlı
+  let metalTL=0
+  if(birimTL>0){
+    const safGram=gram*ayar/100
+    metalTL=safGram*birimTL
+  } else if(birimUSD>0){
+    const safGram=gram*ayar/100
+    metalTL=safGram*birimUSD*usdtl
+  }
+  const topIscTL=iscTL*gram + iscUSD*gram*usdtl
+  const toplamTL=metalTL+topIscTL+spreadTL
+  const toplamUSD=usdtl?toplamTL/usdtl:0
+  const s=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v}
+  s('ie-r-metal-tl',fN(metalTL,2)+' ₺')
+  s('ie-r-isc-tl',fN(topIscTL,2)+' ₺')
+  s('ie-r-toplam-tl',fN(toplamTL,2)+' ₺')
+  s('ie-r-toplam-usd',fN(toplamUSD,2)+' $')
+  return {metalTL,topIscTL,toplamTL,toplamUSD,spreadTL}
 }
 
 function islemGuncelle(){
   const id=parseInt(document.getElementById('ie-id').value)
   const idx=ISLEMLER.findIndex(x=>x.id===id); if(idx<0) return
-  const yeniCariId=parseInt(document.getElementById('ie-cari').value)
-  const eskiCari=CARILER.find(c=>c.id===ISLEMLER[idx].cariId)
-  const yeniCari=CARILER.find(c=>c.id===yeniCariId)
   const i=ISLEMLER[idx]
-  // Eski cari bakiyesini geri al
+  const yeniCariId=parseInt(document.getElementById('ie-cari').value)
+  const eskiCari=CARILER.find(c=>c.id===i.cariId)
+  const yeniCari=CARILER.find(c=>c.id===yeniCariId)
+
+  // Eski cari bakiyesini geri al (eski toplamTL ile)
   if(eskiCari){
     if(i.tip==='satim') eskiCari.bakiye-=i.toplamTL
     else eskiCari.bakiye+=i.toplamTL
-    eskiCari.toplamIslem=Math.max(0,eskiCari.toplamIslem-i.toplamTL)
+    eskiCari.toplamIslem=Math.max(0,(eskiCari.toplamIslem||0)-i.toplamTL)
   }
-  // Yeni cariyi güncelle
+
+  // Yeni değerleri hesapla
+  const gram=parseFloat(document.getElementById('ie-gram').value)||i.gram
+  const ayar=parseFloat(document.getElementById('ie-ayar').value)||i.ayar
+  const birimTL=parseFloat(document.getElementById('ie-birim-tl').value)||0
+  const birimUSD=parseFloat(document.getElementById('ie-birim-usd').value)||0
+  const usdtl=parseFloat(document.getElementById('ie-usdtl').value)||i.usdtl
+  const iscTL=parseFloat(document.getElementById('ie-isc-tl').value)||0
+  const iscUSD=parseFloat(document.getElementById('ie-isc-usd').value)||0
+  const spreadTL=parseFloat(document.getElementById('ie-spread-tl').value)||0
+  const tip=document.getElementById('ie-tip').value
+  const metal=document.getElementById('ie-metal').value
+
+  let metalTL=0,metalUSD=0
+  const safGram=gram*ayar/100
+  if(birimTL>0){ metalTL=safGram*birimTL; metalUSD=metalTL/usdtl }
+  else if(birimUSD>0){ metalUSD=safGram*birimUSD; metalTL=metalUSD*usdtl }
+  const topIscTL=iscTL*gram+iscUSD*gram*usdtl
+  const topIscUSD=topIscTL/usdtl
+  const toplamTL=metalTL+topIscTL+spreadTL
+  const toplamUSD=usdtl?toplamTL/usdtl:0
+
+  // İşlemi güncelle
+  ISLEMLER[idx]={...i,
+    tarih:document.getElementById('ie-tarih').value,
+    not:document.getElementById('ie-not').value,
+    cariId:yeniCariId, cariAd:yeniCari?.ad||i.cariAd,
+    tip, metal, gram, ayar, safGram, birimTL, birimUSD, usdtl,
+    metalTL, metalUSD, iscTL:topIscTL, iscUSD:topIscUSD,
+    spreadTL, toplamTL, toplamUSD,
+    spotTL:metal==='au'?KUR.au_tl:KUR.ag_tl,
+    spotUSD:metal==='au'?KUR.au_usd:KUR.ag_usd,
+  }
+
+  // Yeni cari bakiyesini uygula
   if(yeniCari){
-    if(i.tip==='satim') yeniCari.bakiye+=i.toplamTL
-    else yeniCari.bakiye-=i.toplamTL
-    yeniCari.toplamIslem+=i.toplamTL
+    if(tip==='satim') yeniCari.bakiye+=toplamTL
+    else yeniCari.bakiye-=toplamTL
+    yeniCari.toplamIslem=(yeniCari.toplamIslem||0)+toplamTL
   }
-  ISLEMLER[idx].tarih=document.getElementById('ie-tarih').value
-  ISLEMLER[idx].not=document.getElementById('ie-not').value
-  ISLEMLER[idx].cariId=yeniCariId
-  ISLEMLER[idx].cariAd=yeniCari?.ad||i.cariAd
   save(); closeModal('modal-islem-duzenle'); renderIslemler(); toast('İşlem güncellendi ✓')
+}
+
+// ══════════════════════ ÖDEME DÜZENLE ══════════════════════
+function odemeDuzenle(id){
+  const o=ODEMELER.find(x=>x.id===id); if(!o) return
+  document.getElementById('oe-id').value=o.id
+  document.getElementById('oe-tarih').value=o.tarih
+  document.getElementById('oe-tutar').value=o.tutar
+  document.getElementById('oe-yon').value=o.yon
+  document.getElementById('oe-yontem').value=o.yontem||'nakit'
+  document.getElementById('oe-aciklama').value=o.aciklama||''
+  const sel=document.getElementById('oe-cari')
+  sel.innerHTML='<option value="">Seçiniz...</option>'+CARILER.map(c=>`<option value="${c.id}" ${c.id===o.cariId?'selected':''} >${c.ad}</option>`).join('')
+  openModal('modal-odeme-duzenle')
+}
+
+function odemeDuzenleKaydet(){
+  const id=parseInt(document.getElementById('oe-id').value)
+  const idx=ODEMELER.findIndex(x=>x.id===id); if(idx<0) return
+  const eski=ODEMELER[idx]
+  const eskiCari=CARILER.find(c=>c.id===eski.cariId)
+  // Eski etkiyi geri al
+  if(eskiCari){
+    if(eski.yon==='tahsilat') eskiCari.bakiye-=eski.tutar
+    else eskiCari.bakiye+=eski.tutar
+  }
+  const yeniCariId=parseInt(document.getElementById('oe-cari').value)
+  const yeniCari=CARILER.find(c=>c.id===yeniCariId)
+  const tutar=parseFloat(document.getElementById('oe-tutar').value)||0
+  const yon=document.getElementById('oe-yon').value
+  if(!tutar){toast('Tutar giriniz!','err');return}
+  ODEMELER[idx]={...eski,
+    tarih:document.getElementById('oe-tarih').value,
+    cariId:yeniCariId, cariAd:yeniCari?.ad||eski.cariAd,
+    tutar, yon,
+    yontem:document.getElementById('oe-yontem').value,
+    aciklama:document.getElementById('oe-aciklama').value
+  }
+  // Yeni etkiyi uygula
+  if(yeniCari){
+    if(yon==='tahsilat') yeniCari.bakiye+=tutar
+    else yeniCari.bakiye-=tutar
+  }
+  save(); closeModal('modal-odeme-duzenle'); renderOdemeler(); updateOdemeMetrics(); toast('Ödeme güncellendi ✓')
 }
 
 // syncAyar – TL/USD mod için ayar senkronizasyonu
