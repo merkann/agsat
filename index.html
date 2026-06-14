@@ -146,7 +146,7 @@ tbody tr:hover td{background:var(--gold-lt)}
 
 /* ŞİFRE EKRANI */
 .login-overlay{position:fixed;inset:0;background:#1A1612;display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column}
-.login-overlay.hidden{display:none!important}
+.login-overlay.gizle{display:none!important}
 .login-box{background:#231F1B;border:1px solid #3A3428;border-radius:16px;padding:40px 44px;width:360px;text-align:center}
 .login-logo{font-family:'Cormorant Garamond',serif;font-size:26px;color:#DAA520;margin-bottom:4px}
 .login-sub{font-size:11px;color:#5A4E44;letter-spacing:.12em;text-transform:uppercase;margin-bottom:32px}
@@ -223,18 +223,44 @@ tbody tr:hover td{background:var(--gold-lt)}
 <body>
 
 <!-- ŞİFRE EKRANI -->
-<div class="login-overlay" id="login-overlay">
+<div class="login-overlay" id="lo">
   <div class="login-box">
-    <div class="login-logo">✦ Altın & Gümüş</div>
+    <div class="login-logo">✦ Altın &amp; Gümüş</div>
+    <div class="login-sub">Yönetim Sistemi</div>
+    <label class="login-label">Şifre</label>
+    <input class="login-input" type="password" id="lp" placeholder="••••••••" maxlength="30"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('lb').click()}">
+    <button class="login-btn" id="lb" type="button" onclick="
+      var p=document.getElementById('lp').value;
+      var e=document.getElementById('le');
+      var k=localStorage.getItem('ag_pw')||'1234';
+      if(!p){e.textContent='Şifre giriniz.';return;}
+      if(p===k){
+        document.getElementById('lo').style.cssText='display:none!important';
+        document.getElementById('lp').value='';
+        e.textContent='';
+        if(typeof appStart==='function')appStart();
+      }else{
+        e.textContent='Hatalı şifre.';
+        document.getElementById('lp').value='';
+        document.getElementById('lp').focus();
+      }
+    ">Giriş Yap</button>
+    <div class="login-err" id="le"></div>
+    <div class="login-hint">Varsayılan şifre: <strong style="color:#9A8060">1234</strong></div>
+  </div>
+</div>
     <div class="login-sub">Yönetim Sistemi</div>
     <label class="login-label">Şifre</label>
     <input class="login-input" type="password" id="login-pass" placeholder="••••••••" maxlength="20"
-      onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="login-btn" onclick="doLogin()">Giriş Yap</button>
+      onkeydown="if(event.key==='Enter')loginCheck()">
+    <button class="login-btn" onclick="loginCheck()">Giriş Yap</button>
     <div class="login-err" id="login-err"></div>
     <div class="login-hint">Varsayılan şifre: <strong style="color:#5A4E44">1234</strong></div>
   </div>
 </div>
+
+
 
 <!-- ŞİFRE DEĞİŞTİR MODAL -->
 <div class="overlay" id="modal-sifre" onclick="overlayClick(event,'modal-sifre')">
@@ -245,7 +271,7 @@ tbody tr:hover td{background:var(--gold-lt)}
     <div class="fg"><label>Yeni Şifre (Tekrar)</label><input type="password" id="s-yeni2" placeholder="Tekrar girin"></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-sifre')">İptal</button>
-      <button class="btn btn-gold" onclick="sifreDegistir()">Değiştir</button>
+      <button class="btn btn-gold" onclick="sifreDegistirFn()">Değiştir</button>
     </div>
   </div>
 </div>
@@ -2089,46 +2115,9 @@ function toast(msg,type='ok'){
 }
 
 
-// ══════════════════════ ŞİFRE ══════════════════════
-const SIFRE_KEY = 'ag_sifre_v4'
-function getSifre(){ return LS.get(SIFRE_KEY) || '1234' }
 
-function doLogin(){
-  try {
-    var passEl  = document.getElementById('login-pass')
-    var err     = document.getElementById('login-err')
-    var overlay = document.getElementById('login-overlay')
-    if(!passEl || !err || !overlay){ alert('Sayfa yüklenemedi, yenileyin.'); return }
-    var gir = passEl.value.trim()
-    if(!gir){ err.textContent='Şifre giriniz.'; return }
-    if(gir === getSifre()){
-      overlay.classList.add('hidden')
-      err.textContent=''
-      passEl.value=''
-      updateKurDisplay()
-      renderIslemler()
-      loadFromFirestore()
-    } else {
-      err.textContent='Hatalı şifre, tekrar deneyin.'
-      passEl.value=''
-      passEl.focus()
-    }
-  } catch(e){
-    console.error('doLogin hata:', e)
-  }
-}
-function sifreDegistir(){
-  const eski  = document.getElementById('s-eski').value
-  const yeni  = document.getElementById('s-yeni').value
-  const yeni2 = document.getElementById('s-yeni2').value
-  if(eski !== getSifre()){ toast('Mevcut şifre yanlış!','err'); return }
-  if(yeni.length < 4)    { toast('Yeni şifre en az 4 karakter olmalı!','err'); return }
-  if(yeni !== yeni2)     { toast('Yeni şifreler eşleşmiyor!','err'); return }
-  LS.set(SIFRE_KEY, yeni)
-  closeModal('modal-sifre')
-  ;['s-eski','s-yeni','s-yeni2'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value='' })
-  toast('Şifre başarıyla değiştirildi ✓')
-}
+
+
 
 // ══════════════════════ İŞLEM DÜZENLE ══════════════════════
 function islemDuzenle(id){
@@ -2609,9 +2598,6 @@ function toast(msg,type='ok'){
 }
 
 
-// ══════════════════════ ŞİFRE ══════════════════════
-const SIFRE_KEY = 'ag_sifre_v4'
-function getSifre(){ return LS.get(SIFRE_KEY) || '1234' }
 
 function doLogin(){
   const gir = document.getElementById('login-pass').value.trim()
@@ -2621,7 +2607,6 @@ function doLogin(){
     document.getElementById('login-overlay').classList.add('hidden')
     err.textContent=''
     document.getElementById('login-pass').value=''
-    loadFromFirestore()
   } else {
     err.textContent='Hatalı şifre, tekrar deneyin.'
     document.getElementById('login-pass').value=''
@@ -2802,6 +2787,34 @@ function odemeDuzenleKaydet(){
 function syncAyar(mod){
   const src=document.getElementById('i-ayar-'+mod)?.value
   if(src) document.getElementById('i-ayar').value=src
+}
+
+
+// ══ ŞİFRE DEĞİŞTİR ══
+function sifreDegistirFn(){
+  var eski  = document.getElementById('s-eski').value
+  var yeni  = document.getElementById('s-yeni').value
+  var yeni2 = document.getElementById('s-yeni2').value
+  var mevcutSifre = localStorage.getItem('ag_pw') || '1234'
+  if(eski !== mevcutSifre){ toast('Mevcut şifre yanlış!','err'); return }
+  if(yeni.length < 4){ toast('Yeni şifre en az 4 karakter!','err'); return }
+  if(yeni !== yeni2){ toast('Şifreler eşleşmiyor!','err'); return }
+  localStorage.setItem('ag_pw', yeni)
+  closeModal('modal-sifre')
+  document.getElementById('s-eski').value = ''
+  document.getElementById('s-yeni').value = ''
+  document.getElementById('s-yeni2').value = ''
+  toast('Şifre değiştirildi ✓')
+}
+
+// ══ GİRİŞ SONRASI UYGULAMA BAŞLAT ══
+function appStart(){
+  updateKurDisplay()
+  hesapla()
+  renderIslemler()
+  if(typeof loadFromFirestore === 'function'){
+    try { loadFromFirestore() } catch(e){ console.warn('Firebase:', e) }
+  }
 }
 
 // ══════════════════════ BAŞLAT ══════════════════════
