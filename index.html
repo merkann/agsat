@@ -869,6 +869,11 @@ const nextId=k=>{const id=ID_CTR[k]++;save();return id}
 
 // Firestore'dan veri yükle
 async function loadFromFirestore() {
+  if(typeof firebase === 'undefined' || !firebase.firestore) {
+    hideSyncStatus()
+    toast('Firebase bağlantısı kurulamadı — yerel veriler kullanılıyor', 'err')
+    return
+  }
   showSyncStatus('Veriler yükleniyor...')
   try {
     const docs = ['kur','urunler','cariler','islemler','odemeler','id_ctr']
@@ -2089,21 +2094,29 @@ const SIFRE_KEY = 'ag_sifre_v4'
 function getSifre(){ return LS.get(SIFRE_KEY) || '1234' }
 
 function doLogin(){
-  const gir = document.getElementById('login-pass').value.trim()
-  const err = document.getElementById('login-err')
-  if(!gir){ err.textContent='Şifre giriniz.'; return }
-  if(gir === getSifre()){
-    document.getElementById('login-overlay').classList.add('hidden')
-    err.textContent=''
-    document.getElementById('login-pass').value=''
-    loadFromFirestore()
-  } else {
-    err.textContent='Hatalı şifre, tekrar deneyin.'
-    document.getElementById('login-pass').value=''
-    document.getElementById('login-pass').focus()
+  try {
+    var passEl  = document.getElementById('login-pass')
+    var err     = document.getElementById('login-err')
+    var overlay = document.getElementById('login-overlay')
+    if(!passEl || !err || !overlay){ alert('Sayfa yüklenemedi, yenileyin.'); return }
+    var gir = passEl.value.trim()
+    if(!gir){ err.textContent='Şifre giriniz.'; return }
+    if(gir === getSifre()){
+      overlay.classList.add('hidden')
+      err.textContent=''
+      passEl.value=''
+      updateKurDisplay()
+      renderIslemler()
+      loadFromFirestore()
+    } else {
+      err.textContent='Hatalı şifre, tekrar deneyin.'
+      passEl.value=''
+      passEl.focus()
+    }
+  } catch(e){
+    console.error('doLogin hata:', e)
   }
 }
-
 function sifreDegistir(){
   const eski  = document.getElementById('s-eski').value
   const yeni  = document.getElementById('s-yeni').value
@@ -2795,8 +2808,7 @@ function syncAyar(mod){
 updateKurDisplay()
 hesapla()
 document.getElementById('i-tarih').value=today()
-// Firestore'dan verileri yükle (şifre doğrulandıktan sonra da çağrılır)
-loadFromFirestore()
+// NOT: loadFromFirestore() sadece başarılı girişten sonra çağrılır
 </script>
 </body>
 </html>
