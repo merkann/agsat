@@ -586,7 +586,7 @@ tbody tr:hover td{background:var(--gold-lt)}
   </div>
   <div class="card">
     <table id="odeme-tablo-print">
-      <thead><tr><th>Tarih</th><th>Cari</th><th>Yön</th><th>Tutar (TL)</th><th>Yöntem</th><th>Açıklama</th><th class="no-print"></th></tr></thead>
+      <thead><tr><th>Tarih</th><th>Cari</th><th>Yön</th><th>Birim/Miktar</th><th>TL Karşılığı</th><th>Açıklama</th><th class="no-print"></th></tr></thead>
       <tbody id="odeme-tbody"></tbody>
     </table>
   </div>
@@ -721,23 +721,23 @@ tbody tr:hover td{background:var(--gold-lt)}
       <div class="fg"><label>Cari</label><select id="oe-cari"><option value="">Seçiniz...</option></select></div>
     </div>
     <div class="g2">
-      <div class="fg"><label>Tutar (TL)</label><input type="number" id="oe-tutar" step="0.01"></div>
       <div class="fg"><label>Yön</label>
         <select id="oe-yon">
-          <option value="tahsilat">Tahsilat (Gelen ₺)</option>
-          <option value="odeme">Ödeme (Giden ₺)</option>
+          <option value="tahsilat">Tahsilat (Bizden gelen)</option>
+          <option value="odeme">Ödeme (Bizden giden)</option>
+        </select>
+      </div>
+      <div class="fg"><label>Ödeme Birimi</label>
+        <select id="oe-birim">
+          <option value="tl">TL</option><option value="usd">USD</option>
+          <option value="gr-au">Gram Altın</option><option value="gr-ag">Gram Gümüş</option>
+          <option value="adet-au">Adet Altın</option><option value="adet-ag">Adet Gümüş</option>
         </select>
       </div>
     </div>
-    <div class="fg"><label>Ödeme Yöntemi</label>
-      <select id="oe-yontem">
-        <option value="nakit">Nakit</option>
-        <option value="havale">Havale / EFT</option>
-        <option value="kart">Banka / Kredi Kartı</option>
-        <option value="altin">Altın Karşılığı</option>
-        <option value="gumus">Gümüş Karşılığı</option>
-        <option value="cek">Çek / Senet</option>
-      </select>
+    <div class="g2">
+      <div class="fg"><label>Miktar</label><input type="number" id="oe-miktar" step="0.001" placeholder="0.00"></div>
+      <div class="fg"><label>TL Karşılığı</label><input type="number" id="oe-tutar" step="0.01"></div>
     </div>
     <div class="fg"><label>Açıklama</label><input id="oe-aciklama" placeholder="İsteğe bağlı..."></div>
     <div class="modal-footer">
@@ -773,12 +773,39 @@ tbody tr:hover td{background:var(--gold-lt)}
       <div class="fg"><label>Tarih</label><input type="date" id="o-tarih"></div>
       <div class="fg"><label>Cari</label><select id="o-cari"><option value="">Seçiniz...</option></select></div>
     </div>
-    <div class="g2">
-      <div class="fg"><label>Tutar (TL)</label><input type="number" id="o-tutar" step="0.01"></div>
-      <div class="fg"><label>Yön</label><select id="o-yon"><option value="tahsilat">Tahsilat (Gelen ₺)</option><option value="odeme">Ödeme (Giden ₺)</option></select></div>
+    <div class="fg"><label>Yön</label>
+      <select id="o-yon">
+        <option value="tahsilat">Tahsilat (Bizden gelen)</option>
+        <option value="odeme">Ödeme (Bizden giden)</option>
+      </select>
     </div>
-    <div class="fg"><label>Ödeme Yöntemi</label>
-      <select id="o-yontem"><option value="nakit">Nakit</option><option value="havale">Havale / EFT</option><option value="kart">Banka / Kredi Kartı</option><option value="altin">Altın Karşılığı</option><option value="gumus">Gümüş Karşılığı</option><option value="cek">Çek / Senet</option></select>
+    <div class="sep"></div>
+    <div class="section-label" style="margin-bottom:10px">ÖDEME BİRİMİ</div>
+    <div class="g2">
+      <div class="fg"><label>Ödeme Birimi</label>
+        <select id="o-birim" onchange="odemeModalBirimChange()">
+          <option value="tl">TL (Türk Lirası)</option>
+          <option value="usd">USD (Amerikan Doları)</option>
+          <option value="gr-au">Gram Altın</option>
+          <option value="gr-ag">Gram Gümüş</option>
+          <option value="adet-au">Adet Altın</option>
+          <option value="adet-ag">Adet Gümüş</option>
+        </select>
+      </div>
+      <div class="fg"><label id="o-miktar-lbl">Tutar / Miktar</label>
+        <input type="number" id="o-miktar" step="0.001" placeholder="0.00" oninput="odemeModalHesapla()">
+      </div>
+    </div>
+    <!-- TL karşılığı (otomatik hesap) -->
+    <div id="o-karsılik-area" style="display:none">
+      <div class="g2">
+        <div class="fg"><label>Anlık Kur (USD/TL)</label><input type="number" id="o-kur" step="0.01" oninput="odemeModalHesapla()" placeholder="38.45"></div>
+        <div class="fg" id="o-spotgr-area"><label id="o-spot-lbl">Spot Fiyat (TL/gr)</label><input type="number" id="o-spot" step="0.01" oninput="odemeModalHesapla()" placeholder="3760.00"></div>
+      </div>
+    </div>
+    <div class="fg">
+      <label>TL Karşılığı <span style="color:var(--gold);font-size:10px">(bakiye bu değerle güncellenir)</span></label>
+      <input type="number" id="o-tutar" step="0.01" placeholder="Otomatik hesaplanır veya manuel girin" oninput="">
     </div>
     <div class="fg"><label>Açıklama</label><input id="o-aciklama" placeholder="İsteğe bağlı..."></div>
     <div class="modal-footer">
@@ -1178,7 +1205,11 @@ function islemKaydet(){
   ISLEMLER.unshift(islem)
   if(islemTip==='satim'){cari.bakiye+=r.toplamTL;cari.toplamIslem+=r.toplamTL}
   else{cari.bakiye-=r.toplamTL;cari.toplamIslem+=r.toplamTL}
-  save();renderIslemler()
+  save()
+  renderIslemler()
+  // Anlık güncelleme — açık sayfayı ve bakiyeleri yenile
+  if(curPage==='cariler') renderCariler()
+  if(curPage==='rapor') renderRapor()
   ;['i-gram','i-gram-tl','i-gram-usd','i-not','i-birim-tl','i-birim-usd'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''})
   toast('İşlem kaydedildi ✓')
 }
@@ -1189,7 +1220,12 @@ function islemSil(id){
   const i=ISLEMLER[idx]
   const cari=CARILER.find(c=>c.id===i.cariId)
   if(cari){if(i.tip==='satim')cari.bakiye-=i.toplamTL;else cari.bakiye+=i.toplamTL;cari.toplamIslem=Math.max(0,cari.toplamIslem-i.toplamTL)}
-  ISLEMLER.splice(idx,1);save();renderIslemler();toast('İşlem silindi')
+  ISLEMLER.splice(idx,1)
+  save()
+  renderIslemler()
+  if(curPage==='cariler') renderCariler()
+  if(curPage==='rapor') renderRapor()
+  toast('İşlem silindi')
 }
 
 function renderIslemler(){
@@ -1361,55 +1397,69 @@ function cariDetay(id){
   c.bakiye=b.netBakiye; save()
   document.getElementById('detay-title').textContent=c.ad
 
-  var alimBakiyeLabel = b.alimBakiye>0 ? 'Borcumuz' : 'Kapandı'
+  // Kronolojik karışık liste (işlem + ödeme birleşik, tarihe göre sıralı)
+  var tumHareketler = []
+  islemler.forEach(function(i){
+    var isAdet = i.birimTipi==='adet'
+    var gramStr = isAdet ? (fmt(i.adet||i.gram,0)+' adet') : (fmt(i.gram,2)+' gr')
+    var hasStr = (!isAdet && i.ayar && i.ayar<100) ? fmt(i.safGram||i.gram*(i.ayar/100),3)+' gr' : '—'
+    tumHareketler.push({
+      tarih:i.tarih, tip:i.tip==='alim'?'Alım':'Satım', kategori:'islem',
+      metal:i.metal==='au'?'Altın':'Gümüş',
+      miktar: gramStr, hasMiktar: hasStr,
+      birimTL: fmt(i.birimTL||0,2)+' ₺',
+      iscUSD: fmt(i.iscUSD||0,2)+' $',
+      toplamTL: i.toplamTL, toplamUSD: i.toplamUSD,
+      aciklama: i.urunAd||(i.not||''),
+      renk: i.tip==='satim'?'text-grn':'text-red'
+    })
+  })
+  odemeler.forEach(function(o){
+    tumHareketler.push({
+      tarih:o.tarih, tip:o.yon==='tahsilat'?'Tahsilat':'Ödeme', kategori:'odeme',
+      metal:'—', miktar: odemeMiktarStr(o), hasMiktar:'—',
+      birimTL:'—', iscUSD:'—',
+      toplamTL: o.tutar, toplamUSD: o.tutar/KUR.usdtl,
+      aciklama: o.aciklama||'',
+      renk: o.yon==='tahsilat'?'text-grn':'text-red'
+    })
+  })
+  // Tarihe göre sırala (yeniden eskiye)
+  tumHareketler.sort(function(a,b){ return b.tarih.localeCompare(a.tarih) })
+
+  var alimBakiyeLabel = b.alimBakiye>0 ? 'Borcumuz' : 'Kapalı'
   var alimBakiyeClass = b.alimBakiye>0 ? 'text-red' : 'text-grn'
-  var satimBakiyeLabel = b.satimBakiye>0 ? 'Alacağımız' : 'Kapandı'
+  var satimBakiyeLabel = b.satimBakiye>0 ? 'Alacağımız' : 'Kapalı'
   var satimBakiyeClass = b.satimBakiye>0 ? 'text-grn' : 'text-red'
   var netClass = b.netBakiye>=0 ? 'text-grn' : 'text-red'
   var netSign = b.netBakiye>=0 ? '+' : '−'
 
-  var islemHTML = islemler.length ? islemler.map(function(i){
-    var tipClass = i.tip==='satim' ? 'text-grn' : 'text-red'
-    var isAdet = i.birimTipi==='adet'
-    var gramStr = isAdet?(fmt(i.adet||i.gram,0)+' adet'):(fmt(i.gram,2)+' gr')
-    var hasStr = (!isAdet&&i.ayar&&i.ayar<100)?(fmt(i.safGram||i.gram*(i.ayar/100),3)+' gr'):'—'
-    var birimStr = isAdet?(fmt(i.birimUSD||0,2)+' $/adet'):(fmt(i.birimTL,2)+' ₺/gr')
-    return '<tr><td style="font-size:12px;color:var(--txt2)">'+i.tarih+'</td>'+
-      '<td><span class="badge b-'+i.tip+'">'+(i.tip==='alim'?'Alım':'Satım')+'</span></td>'+
-      '<td><span class="badge b-'+i.metal+'">'+(i.metal==='au'?'Au':'Ag')+'</span></td>'+
-      '<td class="mono" style="font-size:11px">'+(i.ayar||100)+'%</td>'+
-      '<td class="mono">'+gramStr+'</td>'+
-      '<td class="mono" style="font-size:11px;color:var(--txt3)">'+hasStr+'</td>'+
-      '<td class="mono" style="font-size:12px">'+birimStr+'</td>'+
-      '<td class="mono">'+fmt(i.iscTL,2)+' ₺</td>'+
-      '<td class="mono">'+fmt(i.iscUSD||0,2)+' $</td>'+
-      '<td class="mono fw5 '+tipClass+'">'+fmt(i.toplamTL,2)+' ₺</td>'+
-      '<td class="mono text-muted">'+fmt(i.toplamUSD,2)+' $</td></tr>'
-  }).join('') : '<tr><td colspan="11" style="text-align:center;color:var(--txt3);padding:12px">İşlem yok</td></tr>'
-
-  var odemeHTML = odemeler.length ? odemeler.map(function(o){
-    var yonClass = o.yon==='tahsilat' ? 'text-grn' : 'text-red'
-    var badgeClass = o.yon==='tahsilat' ? 'b-green' : 'b-red'
-    var yonLabel = o.yon==='tahsilat' ? 'Tahsilat' : 'Ödeme'
-    return '<tr><td style="font-size:12px;color:var(--txt2)">'+o.tarih+'</td>'+
-      '<td><span class="badge '+badgeClass+'">'+yonLabel+'</span></td>'+
-      '<td class="mono fw5 '+yonClass+'">'+fmt(o.tutar)+' ₺</td>'+
-      '<td style="color:var(--txt2)">'+o.yontem+'</td>'+
-      '<td style="color:var(--txt2);font-size:12px">'+(o.aciklama||'—')+'</td></tr>'
-  }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--txt3);padding:12px">Ödeme yok</td></tr>'
+  var hareketHTML = tumHareketler.length ? tumHareketler.map(function(h){
+    var tipClass = h.kategori==='islem'
+      ? (h.tip==='Alım'?'b-alim':'b-satim')
+      : (h.tip==='Tahsilat'?'b-green':'b-red')
+    return '<tr>'+
+      '<td style="font-size:12px;color:var(--txt2)">'+h.tarih+'</td>'+
+      '<td><span class="badge '+tipClass+'">'+h.tip+'</span></td>'+
+      '<td style="color:var(--txt2)">'+h.metal+'</td>'+
+      '<td class="mono">'+h.miktar+'</td>'+
+      '<td class="mono" style="color:var(--txt2)">'+h.hasMiktar+'</td>'+
+      '<td class="mono" style="color:var(--txt2)">'+h.birimTL+'</td>'+
+      '<td class="mono" style="color:var(--txt2)">'+h.iscUSD+'</td>'+
+      '<td class="mono fw5 '+h.renk+'">'+fmt(h.toplamTL,2)+' ₺</td>'+
+      '<td class="mono" style="color:var(--txt2)">'+fmt(h.toplamUSD,2)+' $</td>'+
+      '<td style="font-size:11px;color:var(--txt3)">'+h.aciklama+'</td>'+
+    '</tr>'
+  }).join('') : '<tr><td colspan="10" style="text-align:center;color:var(--txt3);padding:16px">Kayıt yok</td></tr>'
 
   document.getElementById('detay-content').innerHTML =
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">'+
       '<div class="metric" style="border-top:3px solid var(--red)">'+
         '<div class="metric-val text-red">'+fmt(b.topAlim)+' ₺</div>'+
-        '<div class="metric-lbl">Toplam Alım / '+fmt(islemler.filter(function(i){return i.tip==='alim'}).reduce(function(s,i){return s+(i.toplamUSD||0)},0),2)+' $</div>'+
-        '<div class="metric-lbl">'+fmt(islemler.filter(function(i){return i.tip==='alim'&&i.birimTipi!=='adet'}).reduce(function(s,i){return s+(i.gram||0)},0),2)+' gr / '+fmt(islemler.filter(function(i){return i.tip==='alim'&&i.birimTipi!=='adet'}).reduce(function(s,i){return s+(i.safGram||i.gram*(i.ayar||100)/100)},0),3)+' gr has</div>'+
-      '</div>'+
+        '<div class="metric-lbl">Toplam Alım</div></div>'+
       '<div class="metric" style="border-top:3px solid var(--grn)">'+
         '<div class="metric-val text-grn">'+fmt(b.topSatim)+' ₺</div>'+
-        '<div class="metric-lbl">Toplam Satım / '+fmt(islemler.filter(function(i){return i.tip==='satim'}).reduce(function(s,i){return s+(i.toplamUSD||0)},0),2)+' $</div>'+
-        '<div class="metric-lbl">'+fmt(islemler.filter(function(i){return i.tip==='satim'&&i.birimTipi!=='adet'}).reduce(function(s,i){return s+(i.gram||0)},0),2)+' gr / '+fmt(islemler.filter(function(i){return i.tip==='satim'&&i.birimTipi!=='adet'}).reduce(function(s,i){return s+(i.safGram||i.gram*(i.ayar||100)/100)},0),3)+' gr has</div>'+
-      '</div>'+
+        '<div class="metric-lbl">Toplam Satım</div></div>'+
       '<div class="metric" style="border-top:3px solid var(--gold)">'+
         '<div class="metric-val '+netClass+'">'+netSign+' '+fmt(Math.abs(b.netBakiye))+' ₺</div>'+
         '<div class="metric-lbl">Net Bakiye</div></div>'+
@@ -1430,18 +1480,17 @@ function cariDetay(id){
         '<div style="font-size:13px;font-weight:500">Satım Bakiyesi: <span class="mono '+satimBakiyeClass+'">'+satimBakiyeLabel+': '+fmt(Math.abs(b.satimBakiye))+' ₺</span></div>'+
       '</div>'+
     '</div>'+
-    '<div class="section-label" style="margin-bottom:8px">İŞLEMLER ('+islemler.length+')</div>'+
-    '<div style="overflow-x:auto;margin-bottom:16px">'+
-    '<table><thead><tr><th>Tarih</th><th>Tip</th><th>Metal</th><th>Ayar</th><th>Gram/Adet</th><th>Has Gram</th><th>Birim Fiyat</th><th>İşç. TL</th><th>İşç. USD</th><th>Toplam TL</th><th>Toplam USD</th></tr></thead>'+
-    '<tbody>'+islemHTML+'</tbody></table></div>'+
-    '<div class="section-label" style="margin-bottom:8px">ÖDEMELER ('+odemeler.length+')</div>'+
-    '<table><thead><tr><th>Tarih</th><th>Yön</th><th>Tutar</th><th>Yöntem</th><th>Açıklama</th></tr></thead>'+
-    '<tbody>'+odemeHTML+'</tbody></table>'
+    '<div class="section-label" style="margin-bottom:8px">KRONOLOJİK HAREKETLER ('+tumHareketler.length+') — İşlem + Ödeme birleşik, tarihe göre</div>'+
+    '<div style="overflow-x:auto">'+
+    '<table><thead><tr>'+
+      '<th>Tarih</th><th>Tip</th><th>Metal</th><th>Gram/Adet</th><th>Has Gram</th>'+
+      '<th>Birim TL</th><th>İşç. USD</th><th>Toplam TL</th><th>Toplam USD</th><th>Açıklama</th>'+
+    '</tr></thead>'+
+    '<tbody>'+hareketHTML+'</tbody></table></div>'
 
   document.getElementById('detay-excel-btn').onclick=function(){excelCariDetay(id)}
   openModal('modal-detay')
 }
-
 
 function cariDuzenle(id){
   const c=CARILER.find(x=>x.id===id);if(!c)return
@@ -1470,21 +1519,44 @@ function cariSil(id){
 }
 
 // ══════════════════════ ÖDEMELER ══════════════════════
+
+// Birim etiketleri
+const BIRIM_LABEL = {
+  'tl':'TL','usd':'USD','gr-au':'gr Altın','gr-ag':'gr Gümüş',
+  'adet-au':'Adet Altın','adet-ag':'Adet Gümüş'
+}
+
+function odemeMiktarStr(o){
+  if(!o.birim || o.birim==='tl') return fmt(o.tutar,2)+' ₺'
+  const birimAd = BIRIM_LABEL[o.birim] || o.birim
+  const miktar = o.miktar || o.tutar
+  if(o.birim==='usd') return fmt(miktar,2)+' $'
+  if(o.birim.startsWith('adet')) return fmt(miktar,0)+' '+birimAd
+  return fmt(miktar,3)+' '+birimAd
+}
+
 function renderOdemeler(){
   const tbody=document.getElementById('odeme-tbody');if(!tbody)return
-  if(!ODEMELER.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--txt3);padding:24px">Henüz ödeme yok</td></tr>';return}
-  tbody.innerHTML=ODEMELER.map(o=>`<tr>
-    <td style="font-size:12px;color:var(--txt2)">${o.tarih}</td>
-    <td class="fw5">${o.cariAd}</td>
-    <td><span class="badge ${o.yon==='tahsilat'?'b-green':'b-red'}">${o.yon==='tahsilat'?'Tahsilat':'Ödeme'}</span></td>
-    <td class="mono fw5 ${o.yon==='tahsilat'?'text-grn':'text-red'}">${fmt(o.tutar)} ₺</td>
-    <td style="color:var(--txt2)">${o.yontem}</td>
-    <td style="color:var(--txt2);font-size:12px">${o.aciklama||'—'}</td>
-    <td class="no-print" style="white-space:nowrap">
-      <button class="btn btn-outline btn-sm" onclick="odemeDuzenle(${o.id})" style="margin-right:4px">Düzenle</button>
-      <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="odemeSil(${o.id})">✕</button>
-    </td>
-  </tr>`).join('')
+  if(!ODEMELER.length){
+    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--txt3);padding:24px">Henüz ödeme yok</td></tr>'
+    return
+  }
+  tbody.innerHTML=ODEMELER.map(o=>{
+    const ynClass = o.yon==='tahsilat'?'b-green':'b-red'
+    const ynLabel = o.yon==='tahsilat'?'Tahsilat':'Ödeme'
+    const tlClass = o.yon==='tahsilat'?'text-grn':'text-red'
+    return '<tr>'+
+      '<td style="font-size:12px;color:var(--txt2)">'+o.tarih+'</td>'+
+      '<td class="fw5">'+o.cariAd+'</td>'+
+      '<td><span class="badge '+ynClass+'">'+ynLabel+'</span></td>'+
+      '<td class="mono fw5">'+odemeMiktarStr(o)+'</td>'+
+      '<td class="mono '+tlClass+'">'+fmt(o.tutar,2)+' ₺</td>'+
+      '<td style="color:var(--txt2);font-size:12px">'+(o.aciklama||'—')+'</td>'+
+      '<td class="no-print" style="white-space:nowrap">'+
+        '<button class="btn btn-outline btn-sm" onclick="odemeDuzenle('+o.id+')" style="margin-right:4px">Düzenle</button>'+
+        '<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="odemeSil('+o.id+')">✕</button>'+
+      '</td></tr>'
+  }).join('')
 }
 
 function updateOdemeMetrics(){
@@ -1495,19 +1567,93 @@ function updateOdemeMetrics(){
   s('top-tahsilat',fmt(tahsilat)+' ₺');s('top-odeme',fmt(odeme)+' ₺');s('net-bakiye',fmt(net)+' ₺',net>=0?'text-grn':'text-red')
 }
 
+// Modal: birim değişince kur/spot alanlarını göster/gizle
+function odemeModalBirimChange(){
+  const birim = document.getElementById('o-birim').value
+  const kurArea = document.getElementById('o-karsılik-area')
+  const spotArea = document.getElementById('o-spotgr-area')
+  const miktarLbl = document.getElementById('o-miktar-lbl')
+  const spotLbl = document.getElementById('o-spot-lbl')
+  // Kuru her zaman al
+  const kEl = document.getElementById('o-kur')
+  if(kEl && !kEl.value) kEl.value = KUR.usdtl
+  if(birim === 'tl'){
+    kurArea.style.display = 'none'
+    miktarLbl.textContent = 'Tutar (TL)'
+  } else if(birim === 'usd'){
+    kurArea.style.display = ''
+    spotArea.style.display = 'none'
+    miktarLbl.textContent = 'Tutar (USD)'
+    if(kEl) kEl.value = KUR.usdtl
+  } else if(birim === 'gr-au'){
+    kurArea.style.display = ''
+    spotArea.style.display = ''
+    miktarLbl.textContent = 'Miktar (Gram Altın)'
+    spotLbl.textContent = 'Altın Spot (TL/gr)'
+    const sEl = document.getElementById('o-spot')
+    if(sEl) sEl.value = KUR.au_tl
+    if(kEl) kEl.value = KUR.usdtl
+  } else if(birim === 'gr-ag'){
+    kurArea.style.display = ''
+    spotArea.style.display = ''
+    miktarLbl.textContent = 'Miktar (Gram Gümüş)'
+    spotLbl.textContent = 'Gümüş Spot (TL/gr)'
+    const sEl = document.getElementById('o-spot')
+    if(sEl) sEl.value = KUR.ag_tl
+    if(kEl) kEl.value = KUR.usdtl
+  } else if(birim.startsWith('adet')){
+    kurArea.style.display = ''
+    spotArea.style.display = ''
+    const isAu = birim === 'adet-au'
+    miktarLbl.textContent = 'Adet (' + (isAu ? 'Altın' : 'Gümüş') + ')'
+    spotLbl.textContent = (isAu ? 'Altın' : 'Gümüş') + ' Birim Fiyat (TL/adet)'
+    const sEl = document.getElementById('o-spot')
+    if(sEl) sEl.value = isAu ? KUR.au_tl : KUR.ag_tl
+    if(kEl) kEl.value = KUR.usdtl
+  }
+  odemeModalHesapla()
+}
+
+function odemeModalHesapla(){
+  const birim = document.getElementById('o-birim').value
+  const miktar = parseFloat(document.getElementById('o-miktar').value) || 0
+  const kur = parseFloat(document.getElementById('o-kur')?.value) || KUR.usdtl
+  const spot = parseFloat(document.getElementById('o-spot')?.value) || 0
+  let tlKarsilik = 0
+  if(birim === 'tl') tlKarsilik = miktar
+  else if(birim === 'usd') tlKarsilik = miktar * kur
+  else tlKarsilik = miktar * spot  // gr veya adet × TL fiyatı
+  const tutarEl = document.getElementById('o-tutar')
+  if(tutarEl && miktar) tutarEl.value = tlKarsilik.toFixed(2)
+}
+
 function odemeKaydet(){
   const cariId=parseInt(document.getElementById('o-cari').value)
   const cari=CARILER.find(c=>c.id===cariId)
   if(!cari){toast('Cari seçiniz!','err');return}
-  const tutar=parseFloat(document.getElementById('o-tutar').value)
-  if(!tutar){toast('Tutar giriniz!','err');return}
-  const yon=document.getElementById('o-yon').value
-  const odeme={id:nextId('o'),tarih:document.getElementById('o-tarih').value,
-    cariId,cariAd:cari.ad,tutar,yon,yontem:document.getElementById('o-yontem').value,
-    aciklama:document.getElementById('o-aciklama').value}
+  const birim = document.getElementById('o-birim').value
+  const miktar = parseFloat(document.getElementById('o-miktar').value) || 0
+  const tutar = parseFloat(document.getElementById('o-tutar').value)
+  if(!miktar && birim !== 'tl'){toast('Miktar giriniz!','err');return}
+  if(!tutar){toast('TL karşılığı giriniz!','err');return}
+  const yon = document.getElementById('o-yon').value
+  const birimLabel = BIRIM_LABEL[birim] || birim
+  const odeme = {
+    id:nextId('o'), tarih:document.getElementById('o-tarih').value,
+    cariId, cariAd:cari.ad, tutar,
+    birim, miktar: birim==='tl' ? tutar : miktar,
+    yon, aciklama:document.getElementById('o-aciklama').value
+  }
   ODEMELER.unshift(odeme)
-  if(yon==='tahsilat')cari.bakiye+=tutar;else cari.bakiye-=tutar
-  save();closeModal('modal-odeme');renderOdemeler();updateOdemeMetrics();toast('Ödeme kaydedildi ✓')
+  // Bakiye TL üzerinden her zaman güncellenir
+  if(yon==='tahsilat') cari.bakiye += tutar; else cari.bakiye -= tutar
+  save()
+  closeModal('modal-odeme')
+  renderOdemeler(); updateOdemeMetrics()
+  // Cari detay ve rapor açıksa yenile
+  if(curPage==='cariler') renderCariler()
+  if(curPage==='rapor') renderRapor()
+  toast('Ödeme kaydedildi ✓')
 }
 
 function odemeSil(id){
@@ -1516,13 +1662,652 @@ function odemeSil(id){
   const o=ODEMELER[idx]
   const cari=CARILER.find(c=>c.id===o.cariId)
   if(cari){if(o.yon==='tahsilat')cari.bakiye-=o.tutar;else cari.bakiye+=o.tutar}
-  ODEMELER.splice(idx,1);save();renderOdemeler();updateOdemeMetrics();toast('Ödeme silindi')
+  ODEMELER.splice(idx,1)
+  save()
+  renderOdemeler(); updateOdemeMetrics()
+  if(curPage==='cariler') renderCariler()
+  if(curPage==='rapor') renderRapor()
+  toast('Ödeme silindi')
 }
 
 function populateOdemeModal(){
   const sel=document.getElementById('o-cari')
-  if(sel)sel.innerHTML='<option value="">Seçiniz...</option>'+CARILER.map(c=>`<option value="${c.id}">${c.ad}</option>`).join('')
-  const t=document.getElementById('o-tarih');if(t&&!t.value)t.value=today()
+  if(sel)sel.innerHTML='<option value="">Seçiniz...</option>'+CARILER.map(c=>'<option value="'+c.id+'">'+c.ad+'</option>').join('')
+  const t=document.getElementById('o-tarih');if(t)t.value=today()
+  // Sıfırla
+  const birimEl=document.getElementById('o-birim');if(birimEl)birimEl.value='tl'
+  const miktarEl=document.getElementById('o-miktar');if(miktarEl)miktarEl.value=''
+  const tutarEl=document.getElementById('o-tutar');if(tutarEl)tutarEl.value=''
+  const kurEl=document.getElementById('o-kur');if(kurEl)kurEl.value=KUR.usdtl
+  const aciEl=document.getElementById('o-aciklama');if(aciEl)aciEl.value=''
+  const kurArea=document.getElementById('o-karsılik-area');if(kurArea)kurArea.style.display='none'
+  const miktarLbl=document.getElementById('o-miktar-lbl');if(miktarLbl)miktarLbl.textContent='Tutar / Miktar'
+}
+
+// ══════════════════════ RAPOR ══════════════════════
+function renderRapor(){
+  const topAlim=ISLEMLER.filter(i=>i.tip==='alim').reduce((s,i)=>s+i.toplamTL,0)
+  const topSatim=ISLEMLER.filter(i=>i.tip==='satim').reduce((s,i)=>s+i.toplamTL,0)
+  document.getElementById('rapor-metrics').innerHTML=[
+    {l:'Toplam İşlem',v:ISLEMLER.length,c:'var(--gold)',sub:'kayıt'},
+    {l:'Toplam Alım',v:fmt(topAlim)+' ₺',c:'var(--red)',sub:'TL'},
+    {l:'Toplam Satım',v:fmt(topSatim)+' ₺',c:'var(--grn)',sub:'TL'},
+    {l:'Toplam Cari',v:CARILER.length,c:'var(--blu)',sub:'hesap'},
+  ].map(m=>`<div class="card" style="border-left:3px solid ${m.c}">
+    <div style="font-size:10px;color:var(--txt3);letter-spacing:.05em;margin-bottom:6px">${m.l}</div>
+    <div style="font-size:22px;font-family:'DM Mono';font-weight:500;color:${m.c}">${m.v}</div>
+    <div style="font-size:11px;color:var(--txt3);margin-top:4px">${m.sub}</div>
+  </div>`).join('')
+
+  const borclu=[...CARILER].filter(c=>c.bakiye<0).sort((a,b)=>a.bakiye-b.bakiye)
+  const alacakli=[...CARILER].filter(c=>c.bakiye>0).sort((a,b)=>b.bakiye-a.bakiye)
+  const lH=(arr,fn)=>arr.length?arr.map(fn).join(''):'<p style="color:var(--txt3);font-size:13px">Yok</p>'
+  document.getElementById('borclu-list').innerHTML=lH(borclu,c=>`
+    <div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--bd);cursor:pointer" onclick="cariDetay(${c.id})">
+      <span style="font-size:13px;font-weight:500">${c.ad}</span>
+      <span class="mono fw5 text-red">${fmt(Math.abs(c.bakiye))} ₺</span>
+    </div>`)
+  document.getElementById('alacakli-list').innerHTML=lH(alacakli,c=>`
+    <div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--bd);cursor:pointer" onclick="cariDetay(${c.id})">
+      <span style="font-size:13px;font-weight:500">${c.ad}</span>
+      <span class="mono fw5 text-grn">${fmt(c.bakiye)} ₺</span>
+    </div>`)
+
+  // cari seçici
+  const sel=document.getElementById('rapor-cari-sel')
+  if(sel){
+    sel.innerHTML='<option value="">Tüm Cariler</option>'+CARILER.map(c=>`<option value="${c.id}">${c.ad}</option>`).join('')
+  }
+  renderCariRapor()
+}
+
+function renderCariRapor(){
+  const cariId=parseInt(document.getElementById('rapor-cari-sel')?.value)||0
+  const div=document.getElementById('cari-rapor-content'); if(!div)return
+
+  // Seçili cari ya da tüm cariler
+  var islemler = cariId ? ISLEMLER.filter(i=>i.cariId===cariId) : ISLEMLER
+  var odemeler = cariId ? ODEMELER.filter(o=>o.cariId===cariId) : ODEMELER
+
+  // Kronolojik karışık
+  var hareketler = []
+  islemler.forEach(function(i){
+    var isAdet = i.birimTipi==='adet'
+    var gramStr = isAdet ? fmt(i.adet||i.gram,0)+' adet' : fmt(i.gram,2)+' gr'
+    var hasStr  = (!isAdet && i.ayar && i.ayar<100) ? fmt(i.safGram||i.gram*(i.ayar/100),3)+' gr' : '—'
+    hareketler.push({
+      tarih:i.tarih, tip:i.tip==='alim'?'Alım':'Satım', tipClass:i.tip==='alim'?'b-alim':'b-satim',
+      cari:i.cariAd, metal:i.metal==='au'?'Altın':'Gümüş',
+      miktar:gramStr, hasMiktar:hasStr,
+      birimTL:fmt(i.birimTL||0,2)+' ₺',
+      iscUSD:fmt(i.iscUSD||0,2)+' $',
+      toplamTL:i.toplamTL, toplamUSD:i.toplamUSD,
+      renk:i.tip==='satim'?'text-grn':'text-red',
+      aciklama:i.urunAd||(i.not||'')
+    })
+  })
+  odemeler.forEach(function(o){
+    hareketler.push({
+      tarih:o.tarih,
+      tip:o.yon==='tahsilat'?'Tahsilat':'Ödeme',
+      tipClass:o.yon==='tahsilat'?'b-green':'b-red',
+      cari:o.cariAd, metal:'—',
+      miktar:odemeMiktarStr(o), hasMiktar:'—',
+      birimTL:'—', iscUSD:'—',
+      toplamTL:o.tutar, toplamUSD:o.tutar/KUR.usdtl,
+      renk:o.yon==='tahsilat'?'text-grn':'text-red',
+      aciklama:o.aciklama||''
+    })
+  })
+  hareketler.sort(function(a,b){ return b.tarih.localeCompare(a.tarih) })
+
+  if(!hareketler.length){
+    div.innerHTML='<p style="color:var(--txt3);padding:16px 0">Kayıt bulunamadı</p>'
+    return
+  }
+
+  var topAlim=islemler.filter(i=>i.tip==='alim').reduce((s,i)=>s+i.toplamTL,0)
+  var topSatim=islemler.filter(i=>i.tip==='satim').reduce((s,i)=>s+i.toplamTL,0)
+  var topTah=odemeler.filter(o=>o.yon==='tahsilat').reduce((s,o)=>s+o.tutar,0)
+  var topOde=odemeler.filter(o=>o.yon==='odeme').reduce((s,o)=>s+o.tutar,0)
+
+  div.innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">'+
+      '<div class="metric"><div class="metric-val text-red">'+fmt(topAlim)+' ₺</div><div class="metric-lbl">Toplam Alım</div></div>'+
+      '<div class="metric"><div class="metric-val text-grn">'+fmt(topSatim)+' ₺</div><div class="metric-lbl">Toplam Satım</div></div>'+
+      '<div class="metric"><div class="metric-val text-grn">'+fmt(topTah)+' ₺</div><div class="metric-lbl">Tahsilat</div></div>'+
+      '<div class="metric"><div class="metric-val text-red">'+fmt(topOde)+' ₺</div><div class="metric-lbl">Yapılan Ödeme</div></div>'+
+    '</div>'+
+    '<div style="overflow-x:auto"><table>'+
+    '<thead><tr>'+
+      '<th>Tarih</th>'+(cariId?'':'<th>Cari</th>')+
+      '<th>Tip</th><th>Metal</th><th>Gram/Adet</th><th>Has Gram</th>'+
+      '<th>Birim TL</th><th>İşç. USD</th><th>Toplam TL</th><th>Toplam USD</th><th>Açıklama</th>'+
+    '</tr></thead><tbody>'+
+    hareketler.map(function(h){
+      return '<tr>'+
+        '<td style="font-size:12px;color:var(--txt2)">'+h.tarih+'</td>'+
+        (cariId?'':'<td class="fw5">'+h.cari+'</td>')+
+        '<td><span class="badge '+h.tipClass+'">'+h.tip+'</span></td>'+
+        '<td style="color:var(--txt2)">'+h.metal+'</td>'+
+        '<td class="mono">'+h.miktar+'</td>'+
+        '<td class="mono" style="color:var(--txt2)">'+h.hasMiktar+'</td>'+
+        '<td class="mono" style="color:var(--txt2)">'+h.birimTL+'</td>'+
+        '<td class="mono" style="color:var(--txt2)">'+h.iscUSD+'</td>'+
+        '<td class="mono fw5 '+h.renk+'">'+fmt(h.toplamTL,2)+' ₺</td>'+
+        '<td class="mono" style="color:var(--txt2)">'+fmt(h.toplamUSD,2)+' $</td>'+
+        '<td style="font-size:11px;color:var(--txt3)">'+h.aciklama+'</td>'+
+      '</tr>'
+    }).join('')+
+    '</tbody></table></div>'
+}
+
+
+// ══════════════════════ EXCEL FONKSİYONLARI ══════════════════════
+function xlsxDown(wb,fname){XLSX.writeFile(wb,fname)}
+
+function excelIslemler(){
+  const ws=XLSX.utils.json_to_sheet(ISLEMLER.map(i=>{
+    const isAdet=i.birimTipi==='adet'
+    return{
+    'Tarih':i.tarih,'Cari':i.cariAd,'Ürün':i.urunAd||'','Ürün Açıklama':i.urunAciklama||'',
+    'Tip':i.tip==='alim'?'Alım':'Satım','Metal':i.metal==='au'?'Altın':'Gümüş',
+    'Birim Tipi':isAdet?'Adet':'Gram',
+    'Ayar %':i.ayar||100,'Gram/Adet':i.gram,'Has Gram':isAdet?0:(i.safGram||i.gram*(i.ayar||100)/100),
+    'Birim Fiyat TL':i.birimTL,'Birim Fiyat USD':i.birimUSD||0,
+    'Metal TL':i.metalTL,'Metal USD':i.metalUSD||0,
+    'İşçilik TL':i.iscTL,'İşçilik USD':i.iscUSD||0,
+    'Spread TL':i.spreadTL||0,
+    'Toplam TL':i.toplamTL,'Toplam USD':i.toplamUSD,'USD/TL Kuru':i.usdtl,'Not':i.not||''
+  }}))
+  const wb=XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb,ws,'Alım-Satım')
+  xlsxDown(wb,'alim-satim-raporu.xlsx');toast('Excel indirildi ✓')
+}
+
+function excelUrunler(){
+  const ws=XLSX.utils.json_to_sheet(URUNLER.map(u=>({
+    'Ürün Adı':u.ad,'Metal':u.metal==='au'?'Altın':'Gümüş','Ayar %':u.ayar,
+    'Alım İşç. USD/gr':u.alimIscUsd||0,'Alım İşç. TL/gr':u.alimIscTl||0,
+    'Satım İşç. USD/gr':u.satimIscUsd||0,'Satım İşç. TL/gr':u.satimIscTl||0,'Açıklama':u.aciklama||''
+  })))
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Ürünler')
+  xlsxDown(wb,'urun-raporu.xlsx');toast('Excel indirildi ✓')
+}
+
+function excelCariIslem(){
+  var rows=[]
+  CARILER.forEach(function(c){
+    var islemler=ISLEMLER.filter(function(i){return i.cariId===c.id})
+    var odemeler=ODEMELER.filter(function(o){return o.cariId===c.id})
+    var b=cariBakiyeHesapla(c.id)
+    var hareketler=[]
+    islemler.forEach(function(i){
+      var isAdet=i.birimTipi==='adet'
+      hareketler.push({
+        'Cari':c.ad,'Cari Tip':TIP_L[c.tip]||c.tip,
+        'Tarih':i.tarih,'Kayıt Tipi':i.tip==='alim'?'Alım':'Satım',
+        'Metal':i.metal==='au'?'Altın':'Gümüş',
+        'Gram/Adet':isAdet?(i.adet||i.gram):i.gram,
+        'Has Gram':isAdet?0:(i.safGram||i.gram*(i.ayar||100)/100),
+        'Birim Fiyat TL':i.birimTL||0,
+        'İşçilik USD':i.iscUSD||0,
+        'Toplam TL':i.toplamTL,'Toplam USD':i.toplamUSD,
+        'Ödeme Birimi':'—','Ödeme Miktar':'—','Açıklama':i.urunAd||(i.not||'')
+      })
+    })
+    odemeler.forEach(function(o){
+      hareketler.push({
+        'Cari':c.ad,'Cari Tip':TIP_L[c.tip]||c.tip,
+        'Tarih':o.tarih,'Kayıt Tipi':o.yon==='tahsilat'?'Tahsilat':'Ödeme',
+        'Metal':'—','Gram/Adet':'—','Has Gram':'—',
+        'Birim Fiyat TL':'—','İşçilik USD':'—',
+        'Toplam TL':o.tutar,'Toplam USD':o.tutar/KUR.usdtl,
+        'Ödeme Birimi':BIRIM_LABEL[o.birim]||'TL',
+        'Ödeme Miktar':o.miktar||o.tutar,'Açıklama':o.aciklama||''
+      })
+    })
+    hareketler.sort(function(a,b){ return String(b['Tarih']).localeCompare(String(a['Tarih'])) })
+    hareketler.forEach(function(h){ rows.push(h) })
+    if(!hareketler.length){
+      rows.push({'Cari':c.ad,'Cari Tip':TIP_L[c.tip]||c.tip,'Tarih':'—','Kayıt Tipi':'Kayıt yok','Toplam TL':0})
+    }
+    // Cari özet satırı
+    rows.push({'Cari':c.ad,'Tarih':'---','Kayıt Tipi':'NET BAKİYE','Toplam TL':b.netBakiye,'Toplam USD':b.netBakiye/KUR.usdtl})
+    rows.push({})
+  })
+  var ws=XLSX.utils.json_to_sheet(rows)
+  var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Cari Hareketler')
+  xlsxDown(wb,'cari-hareket-raporu.xlsx'); toast('Excel indirildi ✓')
+}
+
+function excelCariOdeme(){
+  const rows=[]
+  CARILER.forEach(c=>{
+    const odemeler=ODEMELER.filter(o=>o.cariId===c.id)
+    odemeler.forEach(o=>rows.push({
+      'Cari':c.ad,'Tip':TIP_L[c.tip]||c.tip,'Ödeme Tarihi':o.tarih,
+      'Yön':o.yon==='tahsilat'?'Tahsilat':'Ödeme','Tutar TL':o.tutar,
+      'Yöntem':o.yontem,'Açıklama':o.aciklama||''
+    }))
+    if(!odemeler.length)rows.push({'Cari':c.ad,'Tip':TIP_L[c.tip]||c.tip,'Ödeme Tarihi':'—','Yön':'—','Tutar TL':0,'Yöntem':'—','Açıklama':'—'})
+  })
+  const tahsilat=ODEMELER.filter(o=>o.yon==='tahsilat').reduce((s,o)=>s+o.tutar,0)
+  const odeme=ODEMELER.filter(o=>o.yon==='odeme').reduce((s,o)=>s+o.tutar,0)
+  rows.push({})
+  rows.push({'Cari':'TOPLAM TAHSİLAT','Tutar TL':tahsilat})
+  rows.push({'Cari':'TOPLAM ÖDEME','Tutar TL':odeme})
+  rows.push({'Cari':'NET BAKİYE','Tutar TL':tahsilat-odeme})
+  const ws=XLSX.utils.json_to_sheet(rows)
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Cari Ödemeler')
+  xlsxDown(wb,'cari-odeme-raporu.xlsx');toast('Excel indirildi ✓')
+}
+
+function excelOdemeler(){
+  const ws=XLSX.utils.json_to_sheet(ODEMELER.map(o=>({
+    'Tarih':o.tarih,'Cari':o.cariAd,'Yön':o.yon==='tahsilat'?'Tahsilat':'Ödeme',
+    'Tutar TL':o.tutar,'Yöntem':o.yontem,'Açıklama':o.aciklama||''
+  })))
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Ödemeler')
+  xlsxDown(wb,'odeme-raporu.xlsx');toast('Excel indirildi ✓')
+}
+
+function excelCariDetay(cariId){
+  var c=CARILER.find(function(x){return x.id===cariId}); if(!c) return
+  var b=cariBakiyeHesapla(cariId)
+  var islemler=ISLEMLER.filter(function(i){return i.cariId===cariId})
+  var odemeler=ODEMELER.filter(function(o){return o.cariId===cariId})
+
+  // Kronolojik karışık liste
+  var rows=[]
+  islemler.forEach(function(i){
+    var isAdet=i.birimTipi==='adet'
+    rows.push({
+      'Tarih':i.tarih,
+      'Kayıt Tipi':i.tip==='alim'?'Alım':'Satım',
+      'Metal':i.metal==='au'?'Altın':'Gümüş',
+      'Gram / Adet':isAdet?(i.adet||i.gram):i.gram,
+      'Birim':'Gram',
+      'Has Gram':isAdet?0:(i.safGram||i.gram*(i.ayar||100)/100),
+      'Ayar %':isAdet?'—':(i.ayar||100),
+      'Birim Fiyat TL':i.birimTL||0,
+      'İşçilik USD':i.iscUSD||0,
+      'İşçilik TL':i.iscTL||0,
+      'Toplam TL':i.toplamTL,
+      'Toplam USD':i.toplamUSD,
+      'Ödeme Birimi':'—',
+      'Ödeme Miktar':'—',
+      'Açıklama':i.urunAd||(i.not||'')
+    })
+  })
+  odemeler.forEach(function(o){
+    var birimAd=BIRIM_LABEL[o.birim]||'TL'
+    rows.push({
+      'Tarih':o.tarih,
+      'Kayıt Tipi':o.yon==='tahsilat'?'Tahsilat':'Ödeme',
+      'Metal':'—',
+      'Gram / Adet':'—',
+      'Birim':'—',
+      'Has Gram':'—',
+      'Ayar %':'—',
+      'Birim Fiyat TL':'—',
+      'İşçilik USD':'—',
+      'İşçilik TL':'—',
+      'Toplam TL':o.tutar,
+      'Toplam USD':o.tutar/KUR.usdtl,
+      'Ödeme Birimi':birimAd,
+      'Ödeme Miktar':o.miktar||o.tutar,
+      'Açıklama':o.aciklama||''
+    })
+  })
+  // Tarihe göre sırala
+  rows.sort(function(a,b){ return String(b['Tarih']).localeCompare(String(a['Tarih'])) })
+
+  // Özet satırları ekle
+  rows.push({})
+  rows.push({'Tarih':'ÖZET','Kayıt Tipi':'Toplam Alım','Toplam TL':b.topAlim,'Toplam USD':b.topAlim/KUR.usdtl})
+  rows.push({'Tarih':'ÖZET','Kayıt Tipi':'Toplam Satım','Toplam TL':b.topSatim,'Toplam USD':b.topSatim/KUR.usdtl})
+  rows.push({'Tarih':'ÖZET','Kayıt Tipi':'Yapılan Ödeme','Toplam TL':b.topOdeme,'Toplam USD':b.topOdeme/KUR.usdtl})
+  rows.push({'Tarih':'ÖZET','Kayıt Tipi':'Tahsilat','Toplam TL':b.topTahsilat,'Toplam USD':b.topTahsilat/KUR.usdtl})
+  rows.push({'Tarih':'ÖZET','Kayıt Tipi':'NET BAKİYE','Toplam TL':b.netBakiye,'Toplam USD':b.netBakiye/KUR.usdtl})
+
+  var wb=XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Cari Hareketler')
+
+  // Ayrıca özet sayfası
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{
+    'Cari Adı':c.ad, 'Tip':TIP_L[c.tip]||c.tip, 'Telefon':c.tel||'',
+    'Toplam Alım TL':b.topAlim, 'Toplam Satım TL':b.topSatim,
+    'Yapılan Ödeme TL':b.topOdeme, 'Tahsilat TL':b.topTahsilat,
+    'Alım Bakiyesi TL':b.alimBakiye, 'Satım Bakiyesi TL':b.satimBakiye,
+    'Net Bakiye TL':b.netBakiye, 'USD/TL Kuru':KUR.usdtl
+  }]), 'Özet')
+
+  xlsxDown(wb, 'cari-'+c.ad.replace(/\s+/g,'_')+'.xlsx')
+  toast('Excel indirildi ✓')
+}
+
+function excelSeciliCari(){
+  const cariId=parseInt(document.getElementById('rapor-cari-sel')?.value)||0
+  if(cariId){excelCariDetay(cariId);return}
+  excelCariIslem()
+}
+
+function excelTamRapor(){
+  const wb=XLSX.utils.book_new()
+  // Alım-Satım
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ISLEMLER.map(i=>({
+    'Tarih':i.tarih,'Cari':i.cariAd,'Ürün':i.urunAd||'','Tip':i.tip==='alim'?'Alım':'Satım',
+    'Metal':i.metal==='au'?'Altın':'Gümüş','Gram':i.gram,'Birim TL':i.birimTL,
+    'İşçilik TL':i.iscTL,'Toplam TL':i.toplamTL,'USD':i.toplamUSD
+  }))),'Alım-Satım')
+  // Cariler
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(CARILER.map(c=>({
+    'Ad':c.ad,'Tip':TIP_L[c.tip]||c.tip,'Telefon':c.tel||'','Bakiye TL':c.bakiye,'Toplam İşlem TL':c.toplamIslem
+  }))),'Cariler')
+  // Ödemeler
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ODEMELER.map(o=>({
+    'Tarih':o.tarih,'Cari':o.cariAd,'Yön':o.yon==='tahsilat'?'Tahsilat':'Ödeme',
+    'Tutar TL':o.tutar,'Yöntem':o.yontem,'Açıklama':o.aciklama||''
+  }))),'Ödemeler')
+  // Ürünler
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(URUNLER.map(u=>({
+    'Ürün Adı':u.ad,'Metal':u.metal==='au'?'Altın':'Gümüş','Ayar':u.ayar,
+    'Alım İşç. USD':u.alimIscUsd||0,'Alım İşç. TL':u.alimIscTl||0,
+    'Satım İşç. USD':u.satimIscUsd||0,'Satım İşç. TL':u.satimIscTl||0
+  }))),'Ürünler')
+  xlsxDown(wb,'tam-rapor.xlsx');toast('Tam rapor indirildi ✓')
+}
+
+// ══════════════════════ YAZDIR ══════════════════════
+function yazdir(secId){
+  // print alanlarını doldur
+  const dn=document.getElementById('print-tarih-as');if(dn)dn.textContent=nowStr()
+  const dc=document.getElementById('print-tarih-cb');if(dc)dc.textContent=nowStr()
+  const do2=document.getElementById('print-tarih-ol');if(do2)do2.textContent=nowStr()
+  // AS tbody
+  const ast=document.getElementById('print-as-tbody')
+  if(ast)ast.innerHTML=ISLEMLER.map(i=>{
+    const isAdet=i.birimTipi==='adet'
+    const gramStr=isAdet?(fmt(i.adet||i.gram,0)+' adet'):(fmt(i.gram,2)+' gr')
+    const hasStr=(!isAdet&&i.ayar&&i.ayar<100)?(fmt(i.safGram||i.gram*(i.ayar/100),3)+' gr'):'—'
+    const birimStr=isAdet?(fmt(i.birimUSD||0,2)+' $/adet'):(fmt(i.birimTL,2)+' ₺/gr')
+    return`<tr>
+    <td>${i.tarih}</td><td>${i.cariAd}</td><td>${i.urunAd||'—'}</td>
+    <td>${i.tip==='alim'?'Alım':'Satım'}</td><td>${i.metal==='au'?'Altın':'Gümüş'}</td>
+    <td>${i.ayar||100}%</td><td>${gramStr}</td><td>${hasStr}</td><td>${birimStr}</td>
+    <td>${fmt(i.iscTL,2)} ₺</td><td>${fmt(i.iscUSD||0,2)} $</td>
+    <td>${fmt(i.toplamTL,2)} ₺</td><td>${fmt(i.toplamUSD,2)} $</td>
+    <td>${i.urunAciklama||i.not||'—'}</td>
+  </tr>`}).join('')
+  // CB tbody
+  const cbt=document.getElementById('print-cb-tbody')
+  if(cbt)cbt.innerHTML=CARILER.map(c=>`<tr>
+    <td>${c.ad}</td><td>${TIP_L[c.tip]||c.tip}</td><td>${c.tel||'—'}</td>
+    <td>${c.bakiye<0?'− ':'+ '}${fmt(Math.abs(c.bakiye))} ₺</td><td>${fmt(c.toplamIslem||0)} ₺</td>
+  </tr>`).join('')
+  // OL tbody
+  const olt=document.getElementById('print-ol-tbody')
+  if(olt)olt.innerHTML=ODEMELER.map(o=>`<tr>
+    <td>${o.tarih}</td><td>${o.cariAd}</td>
+    <td>${o.yon==='tahsilat'?'Tahsilat':'Ödeme'}</td>
+    <td>${fmt(o.tutar)} ₺</td><td>${o.yontem}</td><td>${o.aciklama||'—'}</td>
+  </tr>`).join('')
+
+  // Geçici olarak seçili alanı göster, diğerlerini gizle
+  ;['print-alim-satim','print-cari-bakiye','print-odeme-list'].forEach(id=>{
+    const el=document.getElementById(id)
+    if(el)el.style.display=(id===secId)?'block':'none'
+  })
+  window.print()
+  ;['print-alim-satim','print-cari-bakiye','print-odeme-list'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none'
+  })
+}
+
+// ══════════════════════ MODAL HELPERS ══════════════════════
+function openModal(id){
+  document.getElementById(id).classList.add('open')
+  if(id==='modal-odeme')populateOdemeModal()
+}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function overlayClick(e,id){if(e.target===document.getElementById(id))closeModal(id)}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(m=>m.classList.remove('open'))
+})
+
+let toastT
+function toast(msg,type='ok'){
+  const ex=document.querySelector('.toast');if(ex)ex.remove()
+  const el=document.createElement('div');el.className='toast '+type;el.textContent=msg
+  document.body.appendChild(el);clearTimeout(toastT);toastT=setTimeout(()=>el.remove(),3000)
+}
+
+
+// ══════════════════════ ŞİFRE ══════════════════════
+const SIFRE_KEY = 'ag_sifre_v4'
+function getSifre(){ return LS.get(SIFRE_KEY) || '1234' }
+
+function doLogin(){
+  const gir = document.getElementById('login-pass').value.trim()
+  const err = document.getElementById('login-err')
+  if(!gir){ err.textContent='Şifre giriniz.'; return }
+  if(gir === getSifre()){
+    document.getElementById('login-overlay').classList.add('hidden')
+    err.textContent=''
+    document.getElementById('login-pass').value=''
+    loadFromFirestore()
+  } else {
+    err.textContent='Hatalı şifre, tekrar deneyin.'
+    document.getElementById('login-pass').value=''
+    document.getElementById('login-pass').focus()
+  }
+}
+
+function sifreDegistir(){
+  const eski  = document.getElementById('s-eski').value
+  const yeni  = document.getElementById('s-yeni').value
+  const yeni2 = document.getElementById('s-yeni2').value
+  if(eski !== getSifre()){ toast('Mevcut şifre yanlış!','err'); return }
+  if(yeni.length < 4)    { toast('Yeni şifre en az 4 karakter olmalı!','err'); return }
+  if(yeni !== yeni2)     { toast('Yeni şifreler eşleşmiyor!','err'); return }
+  LS.set(SIFRE_KEY, yeni)
+  closeModal('modal-sifre')
+  ;['s-eski','s-yeni','s-yeni2'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value='' })
+  toast('Şifre başarıyla değiştirildi ✓')
+}
+
+// ══════════════════════ İŞLEM DÜZENLE ══════════════════════
+function islemDuzenle(id){
+  const i=ISLEMLER.find(x=>x.id===id); if(!i) return
+  document.getElementById('ie-id').value=i.id
+  document.getElementById('ie-tarih').value=i.tarih
+  document.getElementById('ie-not').value=i.not||''
+  document.getElementById('ie-tip').value=i.tip||'alim'
+  document.getElementById('ie-metal').value=i.metal||'au'
+  document.getElementById('ie-gram').value=i.gram||0
+  document.getElementById('ie-ayar').value=i.ayar||100
+  document.getElementById('ie-birim-tl').value=i.birimTL||0
+  document.getElementById('ie-birim-usd').value=i.birimUSD||0
+  document.getElementById('ie-usdtl').value=i.usdtl||KUR.usdtl
+  document.getElementById('ie-isc-tl').value=i.iscTL||0
+  document.getElementById('ie-isc-usd').value=i.iscUSD||0
+  document.getElementById('ie-spread-tl').value=i.spreadTL||0
+  // Gram label: adet mi gram mı
+  const isAdet=i.birimTipi==='adet'
+  document.getElementById('ie-gram-lbl').textContent=isAdet?'Adet Sayısı':'Gram'
+  document.getElementById('ie-birim-lbl').textContent=isAdet?'Birim Fiyat USD/adet':'Birim Fiyat TL/gr (saf)'
+  const sel=document.getElementById('ie-cari')
+  sel.innerHTML=CARILER.map(c=>`<option value="${c.id}" ${c.id===i.cariId?'selected':''} >${c.ad}</option>`).join('')
+  ieDuzenleHesapla()
+  openModal('modal-islem-duzenle')
+}
+
+function ieDuzenleHesapla(){
+  const gram=parseFloat(document.getElementById('ie-gram').value)||0
+  const ayar=parseFloat(document.getElementById('ie-ayar').value)||100
+  const birimTL=parseFloat(document.getElementById('ie-birim-tl').value)||0
+  const birimUSD=parseFloat(document.getElementById('ie-birim-usd').value)||0
+  const usdtl=parseFloat(document.getElementById('ie-usdtl').value)||KUR.usdtl
+  const iscTL=parseFloat(document.getElementById('ie-isc-tl').value)||0
+  const iscUSD=parseFloat(document.getElementById('ie-isc-usd').value)||0
+  const spreadTL=parseFloat(document.getElementById('ie-spread-tl').value)||0
+  // Metal bedeli: birimTL > 0 ise TL bazlı, yoksa USD bazlı
+  let metalTL=0
+  if(birimTL>0){
+    const safGram=gram*ayar/100
+    metalTL=safGram*birimTL
+  } else if(birimUSD>0){
+    const safGram=gram*ayar/100
+    metalTL=safGram*birimUSD*usdtl
+  }
+  const topIscTL=iscTL*gram + iscUSD*gram*usdtl
+  const toplamTL=metalTL+topIscTL+spreadTL
+  const toplamUSD=usdtl?toplamTL/usdtl:0
+  const s=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v}
+  s('ie-r-metal-tl',fN(metalTL,2)+' ₺')
+  s('ie-r-isc-tl',fN(topIscTL,2)+' ₺')
+  s('ie-r-toplam-tl',fN(toplamTL,2)+' ₺')
+  s('ie-r-toplam-usd',fN(toplamUSD,2)+' $')
+  return {metalTL,topIscTL,toplamTL,toplamUSD,spreadTL}
+}
+
+function islemGuncelle(){
+  const id=parseInt(document.getElementById('ie-id').value)
+  const idx=ISLEMLER.findIndex(x=>x.id===id); if(idx<0) return
+  const i=ISLEMLER[idx]
+  const yeniCariId=parseInt(document.getElementById('ie-cari').value)
+  const eskiCari=CARILER.find(c=>c.id===i.cariId)
+  const yeniCari=CARILER.find(c=>c.id===yeniCariId)
+
+  // Eski cari bakiyesini geri al (eski toplamTL ile)
+  if(eskiCari){
+    if(i.tip==='satim') eskiCari.bakiye-=i.toplamTL
+    else eskiCari.bakiye+=i.toplamTL
+    eskiCari.toplamIslem=Math.max(0,(eskiCari.toplamIslem||0)-i.toplamTL)
+  }
+
+  // Yeni değerleri hesapla
+  const gram=parseFloat(document.getElementById('ie-gram').value)||i.gram
+  const ayar=parseFloat(document.getElementById('ie-ayar').value)||i.ayar
+  const birimTL=parseFloat(document.getElementById('ie-birim-tl').value)||0
+  const birimUSD=parseFloat(document.getElementById('ie-birim-usd').value)||0
+  const usdtl=parseFloat(document.getElementById('ie-usdtl').value)||i.usdtl
+  const iscTL=parseFloat(document.getElementById('ie-isc-tl').value)||0
+  const iscUSD=parseFloat(document.getElementById('ie-isc-usd').value)||0
+  const spreadTL=parseFloat(document.getElementById('ie-spread-tl').value)||0
+  const tip=document.getElementById('ie-tip').value
+  const metal=document.getElementById('ie-metal').value
+
+  let metalTL=0,metalUSD=0
+  const safGram=gram*ayar/100
+  if(birimTL>0){ metalTL=safGram*birimTL; metalUSD=metalTL/usdtl }
+  else if(birimUSD>0){ metalUSD=safGram*birimUSD; metalTL=metalUSD*usdtl }
+  const topIscTL=iscTL*gram+iscUSD*gram*usdtl
+  const topIscUSD=topIscTL/usdtl
+  const toplamTL=metalTL+topIscTL+spreadTL
+  const toplamUSD=usdtl?toplamTL/usdtl:0
+
+  // İşlemi güncelle
+  ISLEMLER[idx]={...i,
+    tarih:document.getElementById('ie-tarih').value,
+    not:document.getElementById('ie-not').value,
+    cariId:yeniCariId, cariAd:yeniCari?.ad||i.cariAd,
+    tip, metal, gram, ayar, safGram, birimTL, birimUSD, usdtl,
+    metalTL, metalUSD, iscTL:topIscTL, iscUSD:topIscUSD,
+    spreadTL, toplamTL, toplamUSD,
+    spotTL:metal==='au'?KUR.au_tl:KUR.ag_tl,
+    spotUSD:metal==='au'?KUR.au_usd:KUR.ag_usd,
+  }
+
+  // Yeni cari bakiyesini uygula
+  if(yeniCari){
+    if(tip==='satim') yeniCari.bakiye+=toplamTL
+    else yeniCari.bakiye-=toplamTL
+    yeniCari.toplamIslem=(yeniCari.toplamIslem||0)+toplamTL
+  }
+  save()
+  closeModal('modal-islem-duzenle')
+  renderIslemler()
+  if(curPage==='cariler') renderCariler()
+  if(curPage==='rapor') renderRapor()
+  toast('İşlem güncellendi ✓')
+}
+
+// ══════════════════════ ÖDEME DÜZENLE ══════════════════════
+function odemeDuzenle(id){
+  const o=ODEMELER.find(x=>x.id===id); if(!o) return
+  document.getElementById('oe-id').value=o.id
+  document.getElementById('oe-tarih').value=o.tarih
+  document.getElementById('oe-tutar').value=o.tutar
+  document.getElementById('oe-yon').value=o.yon
+  document.getElementById('oe-birim').value=o.birim||'tl'
+  document.getElementById('oe-miktar').value=o.miktar||o.tutar
+  document.getElementById('oe-aciklama').value=o.aciklama||''
+  const sel=document.getElementById('oe-cari')
+  sel.innerHTML='<option value="">Seçiniz...</option>'+CARILER.map(c=>'<option value="'+c.id+'" '+(c.id===o.cariId?'selected':'')+'>'+c.ad+'</option>').join('')
+  openModal('modal-odeme-duzenle')
+}
+function odemeDuzenleKaydet(){
+  const id=parseInt(document.getElementById('oe-id').value)
+  const idx=ODEMELER.findIndex(x=>x.id===id); if(idx<0) return
+  const eski=ODEMELER[idx]
+  const eskiCari=CARILER.find(c=>c.id===eski.cariId)
+  // Eski etkiyi geri al
+  if(eskiCari){
+    if(eski.yon==='tahsilat') eskiCari.bakiye-=eski.tutar
+    else eskiCari.bakiye+=eski.tutar
+  }
+  const yeniCariId=parseInt(document.getElementById('oe-cari').value)
+  const yeniCari=CARILER.find(c=>c.id===yeniCariId)
+  const tutar=parseFloat(document.getElementById('oe-tutar').value)||0
+  const yon=document.getElementById('oe-yon').value
+  const birim=document.getElementById('oe-birim').value
+  const miktar=parseFloat(document.getElementById('oe-miktar').value)||tutar
+  if(!tutar){toast('TL karşılığı giriniz!','err');return}
+  if(yeniCari){
+    if(yon==='tahsilat') yeniCari.bakiye+=tutar
+    else yeniCari.bakiye-=tutar
+  }
+  ODEMELER[idx]={...eski,
+    tarih:document.getElementById('oe-tarih').value,
+    cariId:yeniCariId, cariAd:yeniCari?.ad||eski.cariAd,
+    tutar, yon, birim, miktar,
+    aciklama:document.getElementById('oe-aciklama').value
+  }
+  save()
+  closeModal('modal-odeme-duzenle')
+  renderOdemeler(); updateOdemeMetrics()
+  if(curPage==='cariler') renderCariler()
+  if(curPage==='rapor') renderRapor()
+  toast('Ödeme güncellendi ✓')
+}
+function odemeSil(id){
+  if(!confirm('Bu ödeme kaydını silmek istediğinize emin misiniz?'))return
+  const idx=ODEMELER.findIndex(o=>o.id===id);if(idx<0)return
+  const o=ODEMELER[idx]
+  const cari=CARILER.find(c=>c.id===o.cariId)
+  if(cari){if(o.yon==='tahsilat')cari.bakiye-=o.tutar;else cari.bakiye+=o.tutar}
+  ODEMELER.splice(idx,1)
+  save()
+  renderOdemeler(); updateOdemeMetrics()
+  if(curPage==='cariler') renderCariler()
+  if(curPage==='rapor') renderRapor()
+  toast('Ödeme silindi')
+}
+
+function populateOdemeModal(){
+  const sel=document.getElementById('o-cari')
+  if(sel)sel.innerHTML='<option value="">Seçiniz...</option>'+CARILER.map(c=>'<option value="'+c.id+'">'+c.ad+'</option>').join('')
+  const t=document.getElementById('o-tarih');if(t)t.value=today()
+  // Sıfırla
+  const birimEl=document.getElementById('o-birim');if(birimEl)birimEl.value='tl'
+  const miktarEl=document.getElementById('o-miktar');if(miktarEl)miktarEl.value=''
+  const tutarEl=document.getElementById('o-tutar');if(tutarEl)tutarEl.value=''
+  const kurEl=document.getElementById('o-kur');if(kurEl)kurEl.value=KUR.usdtl
+  const aciEl=document.getElementById('o-aciklama');if(aciEl)aciEl.value=''
+  const kurArea=document.getElementById('o-karsılik-area');if(kurArea)kurArea.style.display='none'
+  const miktarLbl=document.getElementById('o-miktar-lbl');if(miktarLbl)miktarLbl.textContent='Tutar / Miktar'
 }
 
 // ══════════════════════ RAPOR ══════════════════════
@@ -1963,13 +2748,13 @@ function odemeDuzenle(id){
   document.getElementById('oe-tarih').value=o.tarih
   document.getElementById('oe-tutar').value=o.tutar
   document.getElementById('oe-yon').value=o.yon
-  document.getElementById('oe-yontem').value=o.yontem||'nakit'
+  document.getElementById('oe-birim').value=o.birim||'tl'
+  document.getElementById('oe-miktar').value=o.miktar||o.tutar
   document.getElementById('oe-aciklama').value=o.aciklama||''
   const sel=document.getElementById('oe-cari')
-  sel.innerHTML='<option value="">Seçiniz...</option>'+CARILER.map(c=>`<option value="${c.id}" ${c.id===o.cariId?'selected':''} >${c.ad}</option>`).join('')
+  sel.innerHTML='<option value="">Seçiniz...</option>'+CARILER.map(c=>'<option value="'+c.id+'" '+(c.id===o.cariId?'selected':'')+'>'+c.ad+'</option>').join('')
   openModal('modal-odeme-duzenle')
 }
-
 function odemeDuzenleKaydet(){
   const id=parseInt(document.getElementById('oe-id').value)
   const idx=ODEMELER.findIndex(x=>x.id===id); if(idx<0) return
