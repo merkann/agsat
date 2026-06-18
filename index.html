@@ -5,9 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Altın & Gümüş Yönetim</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<!-- Firebase — defer ile yükle, ana script'i engellemesin -->
-<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!-- Firebase dinamik yükleme — ana script'i HİÇBİR KOŞULDA engellemez -->
+<script>
+(function(){
+  function loadScript(src, cb){
+    var s=document.createElement('script'); s.src=src
+    s.onload=cb; s.onerror=function(){ console.warn('Firebase CDN yüklenemedi:', src) }
+    document.head.appendChild(s)
+  }
+  // Sayfa tamamen yüklendikten SONRA Firebase'i yükle
+  window.addEventListener('load', function(){
+    loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js', function(){
+      loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js', function(){
+        try {
+          var cfg={apiKey:"AIzaSyDRDoFEg7CfI78LIh5hrCQw_SW5Wm_I2SU",authDomain:"altin-gumus.firebaseapp.com",
+            projectId:"altin-gumus",storageBucket:"altin-gumus.firebasestorage.app",
+            messagingSenderId:"633885411247",appId:"1:633885411247:web:bdb711fdfd9b131930915a"}
+          if(!firebase.apps.length) firebase.initializeApp(cfg)
+          window._db = firebase.firestore()
+          // Ana JS'deki db değişkenini güncelle
+          if(typeof window.setFirestoreDb === 'function') window.setFirestoreDb(window._db)
+          console.log('Firebase hazır')
+        } catch(e){ console.warn('Firebase init hatası:', e) }
+      })
+    })
+  })
+})()
+</script>
 <!-- SheetJS for Excel export -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -851,22 +875,11 @@ tbody tr:hover td{background:var(--gold-lt)}
 
 <script>
 // ══════════════════════ FİREBASE KURULUM ══════════════════════
-const firebaseConfig = {
-  apiKey: "AIzaSyDRDoFEg7CfI78LIh5hrCQw_SW5Wm_I2SU",
-  authDomain: "altin-gumus.firebaseapp.com",
-  projectId: "altin-gumus",
-  storageBucket: "altin-gumus.firebasestorage.app",
-  messagingSenderId: "633885411247",
-  appId: "1:633885411247:web:bdb711fdfd9b131930915a"
-}
-// Firebase güvenli init — CDN yüklenmezse script çökmez
+// firebaseConfig dinamik script'te tanımlı
+// Firebase db — dinamik script tarafından set edilir
 var db = null
-try {
-  if(typeof firebase !== 'undefined'){
-    firebase.initializeApp(firebaseConfig)
-    db = firebase.firestore()
-  }
-} catch(e){ console.warn('Firebase init hatası:', e) }
+// Dinamik script db'yi buraya set eder
+window.setFirestoreDb = function(firestoreDb){ db = firestoreDb }
 
 // ══════════════════════ VERİ KATMANI ══════════════════════
 // localStorage — hızlı okuma için önbellek
@@ -900,57 +913,36 @@ var save = () => {
 var nextId=k=>{const id=ID_CTR[k]++;save();return id}
 
 // Firestore'dan veri yükle
-async function loadFromFirestore() {
-  if(!db) {
-    hideSyncStatus()
-    console.warn('Firebase bağlantısı yok — yerel veriler kullanılıyor')
-    return
-  }
+function loadFromFirestore(){
+  if(!db){ return }
   showSyncStatus('Veriler yükleniyor...')
-  try {
-    const docs = ['kur','urunler','cariler','islemler','odemeler','id_ctr']
-    const results = await Promise.all(docs.map(d => db.collection('ag_data').doc(d).get()))
-    let anyData = false
-    results.forEach((snap, i) => {
-      if (snap.exists && snap.data().data) {
-        anyData = true
-        const parsed = JSON.parse(snap.data().data)
-        if (docs[i]==='kur')      KUR      = parsed
-        if (docs[i]==='urunler')  URUNLER  = parsed
-        if (docs[i]==='cariler')  CARILER  = parsed
-        if (docs[i]==='islemler') ISLEMLER = parsed
-        if (docs[i]==='odemeler') ODEMELER = parsed
-        if (docs[i]==='id_ctr')   ID_CTR   = parsed
-      }
-    })
-    // Önbelleği güncelle
-    LS.set('kur_v3',KUR); LS.set('urunler_v3',URUNLER)
-    LS.set('cariler_v3',CARILER); LS.set('islemler_v3',ISLEMLER)
-    LS.set('odemeler_v3',ODEMELER); LS.set('id_ctr_v3',ID_CTR)
-    hideSyncStatus()
-    // Uygulama ilk yüklemesi: localStorage'dan önce ama Firestore'dan yüklendi
-    if(anyData) {
+  var docs=['kur','urunler','cariler','islemler','odemeler','id_ctr']
+  Promise.all(docs.map(function(d){ return db.collection('ag_data').doc(d).get() }))
+    .then(function(results){
+      var anyData=false
+      results.forEach(function(snap,i){
+        if(snap.exists && snap.data().data){
+          anyData=true
+          var parsed=JSON.parse(snap.data().data)
+          if(docs[i]==='kur')      KUR=parsed
+          if(docs[i]==='urunler')  URUNLER=parsed
+          if(docs[i]==='cariler')  CARILER=parsed
+          if(docs[i]==='islemler') ISLEMLER=parsed
+          if(docs[i]==='odemeler') ODEMELER=parsed
+          if(docs[i]==='id_ctr')   ID_CTR=parsed
+        }
+      })
+      LS.set('kur_v3',KUR); LS.set('urunler_v3',URUNLER)
+      LS.set('cariler_v3',CARILER); LS.set('islemler_v3',ISLEMLER)
+      LS.set('odemeler_v3',ODEMELER); LS.set('id_ctr_v3',ID_CTR)
+      hideSyncStatus()
       updateKurDisplay(); renderIslemler()
-      if(document.getElementById('page-cariler').classList.contains('active')) renderCariler()
-    } else {
-      // Firestore boş — localStorage'daki örnek veriyi yükle ve Firestore'a kaydet
-      URUNLER = [
-        {id:1,ad:'22 Ayar Bilezik',   metal:'au',ayar:91.6,alimIscUsd:2.5,alimIscTl:0,satimIscUsd:3.0,satimIscTl:0,aciklama:''},
-        {id:2,ad:'14 Ayar Yüzük',    metal:'au',ayar:58.5,alimIscUsd:4.0,alimIscTl:0,satimIscUsd:5.0,satimIscTl:0,aciklama:''},
-        {id:3,ad:'18 Ayar Kolye',    metal:'au',ayar:75.0,alimIscUsd:3.2,alimIscTl:0,satimIscUsd:4.0,satimIscTl:0,aciklama:''},
-        {id:4,ad:'Gümüş Zincir 925', metal:'ag',ayar:92.5,alimIscUsd:0,  alimIscTl:25,satimIscUsd:0, satimIscTl:35,aciklama:''},
-        {id:5,ad:'Tam Altın (Sikke)',metal:'au',ayar:91.6,alimIscUsd:0,  alimIscTl:0, satimIscUsd:0, satimIscTl:0, aciklama:'Sikke/Cumhuriyet'},
-      ]
-      CARILER = []; ISLEMLER = []; ODEMELER = []
-      ID_CTR = {u:6,c:1,i:1,o:1}
-      save()
-    }
-    toast('Veriler buluttan yüklendi ✓')
-  } catch(e) {
-    hideSyncStatus()
-    toast('Bağlantı yok — yerel veriler kullanılıyor', 'err')
-    console.warn('Firestore yüklenemedi:', e)
-  }
+      if(anyData) toast('Veriler buluttan yüklendi ✓')
+    })
+    .catch(function(e){
+      hideSyncStatus()
+      console.warn('Firestore yüklenemedi:', e)
+    })
 }
 
 function showSyncStatus(msg) {
@@ -2385,58 +2377,6 @@ function appStart(){
   }
 }
 
-function loadFromFirestore() {
-  if(typeof firebase === 'undefined' || !firebase.firestore) {
-    hideSyncStatus()
-    toast('Firebase bağlantısı kurulamadı — yerel veriler kullanılıyor', 'err')
-    return
-  }
-  showSyncStatus('Veriler yükleniyor...')
-  try {
-    const docs = ['kur','urunler','cariler','islemler','odemeler','id_ctr']
-    const results = await Promise.all(docs.map(d => db.collection('ag_data').doc(d).get()))
-    let anyData = false
-    results.forEach((snap, i) => {
-      if (snap.exists && snap.data().data) {
-        anyData = true
-        const parsed = JSON.parse(snap.data().data)
-        if (docs[i]==='kur')      KUR      = parsed
-        if (docs[i]==='urunler')  URUNLER  = parsed
-        if (docs[i]==='cariler')  CARILER  = parsed
-        if (docs[i]==='islemler') ISLEMLER = parsed
-        if (docs[i]==='odemeler') ODEMELER = parsed
-        if (docs[i]==='id_ctr')   ID_CTR   = parsed
-      }
-    })
-    // Önbelleği güncelle
-    LS.set('kur_v3',KUR); LS.set('urunler_v3',URUNLER)
-    LS.set('cariler_v3',CARILER); LS.set('islemler_v3',ISLEMLER)
-    LS.set('odemeler_v3',ODEMELER); LS.set('id_ctr_v3',ID_CTR)
-    hideSyncStatus()
-    // Uygulama ilk yüklemesi: localStorage'dan önce ama Firestore'dan yüklendi
-    if(anyData) {
-      updateKurDisplay(); renderIslemler()
-      if(document.getElementById('page-cariler').classList.contains('active')) renderCariler()
-    } else {
-      // Firestore boş — localStorage'daki örnek veriyi yükle ve Firestore'a kaydet
-      URUNLER = [
-        {id:1,ad:'22 Ayar Bilezik',   metal:'au',ayar:91.6,alimIscUsd:2.5,alimIscTl:0,satimIscUsd:3.0,satimIscTl:0,aciklama:''},
-        {id:2,ad:'14 Ayar Yüzük',    metal:'au',ayar:58.5,alimIscUsd:4.0,alimIscTl:0,satimIscUsd:5.0,satimIscTl:0,aciklama:''},
-        {id:3,ad:'18 Ayar Kolye',    metal:'au',ayar:75.0,alimIscUsd:3.2,alimIscTl:0,satimIscUsd:4.0,satimIscTl:0,aciklama:''},
-        {id:4,ad:'Gümüş Zincir 925', metal:'ag',ayar:92.5,alimIscUsd:0,  alimIscTl:25,satimIscUsd:0, satimIscTl:35,aciklama:''},
-        {id:5,ad:'Tam Altın (Sikke)',metal:'au',ayar:91.6,alimIscUsd:0,  alimIscTl:0, satimIscUsd:0, satimIscTl:0, aciklama:'Sikke/Cumhuriyet'},
-      ]
-      CARILER = []; ISLEMLER = []; ODEMELER = []
-      ID_CTR = {u:6,c:1,i:1,o:1}
-      save()
-    }
-    toast('Veriler buluttan yüklendi ✓')
-  } catch(e) {
-    hideSyncStatus()
-    toast('Bağlantı yok — yerel veriler kullanılıyor', 'err')
-    console.warn('Firestore yüklenemedi:', e)
-  }
-}
 
 
 
