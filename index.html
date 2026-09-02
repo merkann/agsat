@@ -840,7 +840,7 @@ tbody tr:hover td{background:var(--gold-lt)}
       <div class="fg"><label>Cari</label><select id="o-cari"><option value="">Seçiniz...</option></select></div>
     </div>
     <div class="fg"><label>Yön</label>
-      <select id="o-yon">
+      <select id="o-yon" onchange="odemeYonDegisti()">
         <option value="tahsilat">Tahsilat (Bizden gelen)</option>
         <option value="odeme">Ödeme (Bizden giden)</option>
       </select>
@@ -1769,16 +1769,75 @@ function odemeKalemGuncelle(idx){
   var tlEl=document.getElementById('os-tl-'+idx)
   if(!birimEl||!miktarEl||!tlEl)return
   var birim=birimEl.value, miktar=parseFloat(miktarEl.value)||0
+  odemeKalemUrunAlaniGuncelle(idx,birim)
   var tl=odemeKalemBirimTL(birim,miktar)
   if(tl===null){
-    // Adet altın/gümüş: otomatik karşılık hesaplanamıyor — alandaki TL değerine
-    // dokunma, kullanıcı kendi girsin (bkz. odemeKalemBirimTL yorumu)
-    tl=parseFloat(tlEl.value)||0
+    // Adet altın/gümüş: hangi ürün (sikke) seçiliyse onun tanımlı fiyatını kullan
+    var urunTL=odemeKalemUrunFiyatindanTL(idx,miktar)
+    if(urunTL!==null){
+      tl=urunTL
+      tlEl.value=tl.toFixed(2)
+    }else{
+      // Ürün seçilmedi/tanımlı değil — alandaki TL değerine dokunma, kullanıcı kendi girsin
+      tl=parseFloat(tlEl.value)||0
+    }
   } else {
     tlEl.value=tl.toFixed(2)
   }
   if(odemeKalemleri[idx])odemeKalemleri[idx]={birim,miktar,tutarTL:tl}
   odemeToplamGuncelle()
+}
+
+// "Adet Altın/Gümüş" seçiliyken hangi ürün (sikke) olduğunu sormak için alanı göster/gizle ve doldur
+function odemeKalemUrunAlaniGuncelle(idx,birim){
+  var wrap=document.getElementById('os-urun-wrap-'+idx)
+  if(!wrap)return
+  var isAdet=birim==='adet-au'||birim==='adet-ag'
+  wrap.style.display=isAdet?'':'none'
+  if(!isAdet)return
+  var metal=birim==='adet-au'?'au':'ag'
+  var sel=document.getElementById('os-urun-'+idx)
+  if(!sel||sel.getAttribute('data-metal')===metal)return
+  var urunler=URUNLER.filter(function(u){return u.birimTipi==='adet'&&u.metal===metal})
+  sel.setAttribute('data-metal',metal)
+  sel.innerHTML=urunler.length
+    ? '<option value="">Ürün seçin (fiyat otomatik gelir)...</option>'+urunler.map(function(u){return '<option value="'+u.id+'">'+u.ad+'</option>'}).join('')
+    : '<option value="">Tanımlı adet ürünü yok — Ürünler sayfasından ekleyin, ya da TL karşılığını elle girin</option>'
+}
+
+// Seçili ürünün, işlem yönüne (tahsilat=biz alıyoruz→alım fiyatı, ödeme=biz veriyoruz→satım fiyatı)
+// göre TL karşılığını hesaplar. Ürün seçilmemişse null döner (elle girişe düşülür).
+function odemeKalemUrunFiyatindanTL(idx,miktar){
+  var sel=document.getElementById('os-urun-'+idx)
+  if(!sel||!sel.value)return null
+  var urun=URUNLER.find(function(u){return u.id===parseInt(sel.value)})
+  if(!urun)return null
+  var yon=document.getElementById('o-yon').value
+  var birimFiyatUsd=yon==='tahsilat'?(urun.alimFiyatUsd||0):(urun.satimFiyatUsd||0)
+  var hintEl=document.getElementById('os-urun-hint-'+idx)
+  if(hintEl)hintEl.textContent=(yon==='tahsilat'?'Alım':'Satım')+' fiyatı: '+fmt(birimFiyatUsd,2)+' $/adet × '+fmt(KUR.usdtl,2)+' kur = '+fmt(birimFiyatUsd*KUR.usdtl,2)+' ₺/adet'
+  return miktar*birimFiyatUsd*KUR.usdtl
+}
+
+function odemeKalemUrunSecildi(idx){
+  var miktarEl=document.getElementById('os-miktar-'+idx)
+  var tlEl=document.getElementById('os-tl-'+idx)
+  if(!miktarEl||!tlEl)return
+  var miktar=parseFloat(miktarEl.value)||0
+  var tl=odemeKalemUrunFiyatindanTL(idx,miktar)
+  if(tl!==null){
+    tlEl.value=tl.toFixed(2)
+    if(odemeKalemleri[idx])odemeKalemleri[idx].tutarTL=tl
+    odemeToplamGuncelle()
+  }
+}
+
+// Tahsilat/Ödeme yönü değişince, ürün seçilmiş satırların fiyatını (alım↔satım) yeniden hesapla
+function odemeYonDegisti(){
+  odemeKalemleri.forEach(function(k,i){
+    var sel=document.getElementById('os-urun-'+i)
+    if(sel&&sel.value)odemeKalemUrunSecildi(i)
+  })
 }
 
 function odemeKalemSil(idx){
@@ -1799,6 +1858,7 @@ function odemeToplamGuncelle(){
 function odemeModalSatirHTML(idx,k){
   var opts=['tl|TL','usd|USD','gr-au|Gram Altın','gr-ag|Gram Gümüş','adet-au|Adet Altın','adet-ag|Adet Gümüş']
     .map(function(o){var p=o.split('|');return '<option value="'+p[0]+'"'+(k&&k.birim===p[0]?' selected':'')+'>'+p[1]+'</option>'}).join('')
+  var isAdet=k&&(k.birim==='adet-au'||k.birim==='adet-ag')
   return '<div class="odeme-satir" id="os-'+idx+'">'+
     '<div><label style="font-size:11px;color:var(--txt2)">Birim</label>'+
     '<select onchange="odemeKalemGuncelle('+idx+')" id="os-birim-'+idx+'">'+opts+'</select></div>'+
@@ -1807,6 +1867,11 @@ function odemeModalSatirHTML(idx,k){
     '<div><label style="font-size:11px;color:var(--txt2)">≈ TL</label>'+
     '<input type="number" step="0.01" placeholder="TL" value="'+(k?fmt(k.tutarTL,2):'')+'" id="os-tl-'+idx+'" oninput="odemeToplamGuncelle()"></div>'+
     '<button class="odeme-satir-del" onclick="odemeKalemSil('+idx+')" title="Kaldır">✕</button>'+
+    '<div id="os-urun-wrap-'+idx+'" style="display:'+(isAdet?'':'none')+';grid-column:1/-1;margin-top:2px">'+
+      '<label style="font-size:11px;color:var(--txt2)">Hangi ürün (fiyatı otomatik gelsin)</label>'+
+      '<select id="os-urun-'+idx+'" onchange="odemeKalemUrunSecildi('+idx+')" style="margin-bottom:2px"></select>'+
+      '<div id="os-urun-hint-'+idx+'" style="font-size:10px;color:var(--txt3)"></div>'+
+    '</div>'+
   '</div>'
 }
 
