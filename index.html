@@ -433,6 +433,9 @@ tbody tr:hover td{background:var(--gold-lt)}
   <div class="g2" style="gap:20px">
     <div class="card">
       <h3 class="card-title">Kur Girişi</h3>
+      <div id="kur-oneri-not" style="display:none;font-size:11px;color:var(--gold);background:var(--gold-lt);border:1px solid var(--gold-bd);border-radius:var(--r);padding:8px 10px;margin-bottom:12px">
+        ◈ Güncel piyasa kuru öneri olarak dolduruldu — kontrol edin ve uygulamak için "Kurları Kaydet"e basın.
+      </div>
       <div class="tab-pills">
         <button class="tab-pill active" id="tp-tl" onclick="setKurMode('tl')">TL Bazlı Giriş</button>
         <button class="tab-pill" id="tp-usd" onclick="setKurMode('usd')">USD Bazlı Giriş</button>
@@ -941,6 +944,7 @@ function loadFromFirestore(){
       hideSyncStatus()
       updateKurDisplay(); renderIslemler()
       if(anyData) toast('Veriler buluttan yüklendi ✓')
+      if(typeof otomatikKurGuncelle==='function') otomatikKurGuncelle()
     })
     .catch(function(e){
       hideSyncStatus()
@@ -1037,8 +1041,11 @@ function kurKaydet(){
     agTl=(parseFloat(document.getElementById('k-ag-usd').value)||0)*usdtl
   }
   if(!usdtl||!auTl||!agTl){toast('Tüm kur alanlarını doldurun!','err');return}
-  KUR={usdtl,au_tl:auTl,ag_tl:agTl,au_usd:auTl/usdtl,ag_usd:agTl/usdtl,tarih:today()}
+  KUR={usdtl,au_tl:auTl,ag_tl:agTl,au_usd:auTl/usdtl,ag_usd:agTl/usdtl,tarih:today(),guncellemeZamani:Date.now(),otomatik:false}
   save();updateKurDisplay();toast('Kurlar kaydedildi ✓')
+  // Öneri vurgusu varsa temizle — artık kullanıcı onaylayıp kaydetti
+  ;['k-usdtl','k-au-tl','k-ag-tl'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.remove('highlight')})
+  var not=document.getElementById('kur-oneri-not'); if(not) not.style.display='none'
   // Tüm sayfaları kur değişimiyle güncelle (anlık hesaplama)
   renderIslemler(); if(curPage==='rapor') renderRapor()
 }
@@ -1051,7 +1058,7 @@ function updateKurDisplay(){
   s('ri-usdtl',fmt(KUR.usdtl,4)+(KUR.tarih?' ('+KUR.tarih+')':''));s('ri-au-tl',fmt(KUR.au_tl,2)+' ₺/gr');s('ri-ag-tl',fmt(KUR.ag_tl,4)+' ₺/gr')
   // sb-kur'da da tarih göster
   const kurTarihEl=document.getElementById('sb-kur-tarih')
-  if(kurTarihEl) kurTarihEl.textContent=KUR.tarih?'Kur: '+KUR.tarih:'—'
+  if(kurTarihEl) kurTarihEl.textContent=KUR.tarih?('Kur: '+KUR.tarih+(KUR.otomatik?' · otomatik':' · elle girildi')):'—'
   renderAyarTablo()
   // Güncelle form alanları
   document.getElementById('k-usdtl').value=KUR.usdtl
@@ -1072,6 +1079,71 @@ function renderAyarTablo(){
   }
   build(document.getElementById('ayar-tablo'),AUL,KUR.au_tl)
   build(document.getElementById('ayar-tablo-ag'),AGL,KUR.ag_tl)
+}
+
+// ══════════════════════ OTOMATİK KUR GÜNCELLEME ══════════════════════
+// KUR.tarih (gün) yerine tam zaman damgası — "günde birkaç kez" tazelik kontrolü için
+var KUR_TAZE_MS = 4*60*60*1000 // 4 saat — bu süreden eskiyse yeniden çekilir
+var GRAM_PER_OZ = 31.1034768
+var KUR_MAX_SIGMA = 0.25 // önceki değere göre %25'ten fazla sıçrama = şüpheli veri, reddet
+
+function kurGuncellemeGerekliMi(){
+  if(!KUR || !KUR.guncellemeZamani) return true
+  return (Date.now() - KUR.guncellemeZamani) > KUR_TAZE_MS
+}
+
+function kurMakulMu(yeni, eski){
+  if(!eski) return true
+  var degisim = Math.abs(yeni - eski) / eski
+  return degisim <= KUR_MAX_SIGMA
+}
+
+// ÖNEMLİ: bu fonksiyon KUR'u veya kaydedilen veriyi DEĞİŞTİRMEZ — sadece piyasa
+// kurunu çekip "Kur Girişi" formuna öneri olarak doldurur. Gerçek fiyatlandırmaya
+// yansıması için kullanıcının yine de "Kurları Kaydet"e basması gerekir. Bu bilinçli
+// bir tercih: kur, babanın kendi kaynağına/yöntemine göre belirlediği bir değer
+// olabilir — uygulama onun onayı olmadan sessizce farklı bir rakam uygulamamalı.
+function otomatikKurGuncelle(){
+  if(!kurGuncellemeGerekliMi()) return
+  var oncekiUsdtl=KUR&&KUR.usdtl, oncekiAuTl=KUR&&KUR.au_tl, oncekiAgTl=KUR&&KUR.ag_tl
+  Promise.all([
+    fetch('https://open.er-api.com/v6/latest/USD').then(function(r){return r.json()}),
+    fetch('https://xaus.com/api/v1/intraday?symbol=xau&hours=1').then(function(r){return r.json()}),
+    fetch('https://xaus.com/api/v1/intraday?symbol=xag&hours=1').then(function(r){return r.json()})
+  ]).then(function(res){
+    var fx=res[0], auRes=res[1], agRes=res[2]
+    var usdtl = fx && fx.rates && fx.rates.TRY
+    var auPts = auRes && auRes.points
+    var agPts = agRes && agRes.points
+    var auUsdOz = auPts && auPts.length ? auPts[auPts.length-1].p : null
+    var agUsdOz = agPts && agPts.length ? agPts[agPts.length-1].p : null
+    if(!usdtl || !auUsdOz || !agUsdOz) throw new Error('eksik veri')
+    var auUsdGr = auUsdOz / GRAM_PER_OZ
+    var agUsdGr = agUsdOz / GRAM_PER_OZ
+    var auTl = auUsdGr * usdtl
+    var agTl = agUsdGr * usdtl
+    if(!kurMakulMu(usdtl,oncekiUsdtl) || !kurMakulMu(auTl,oncekiAuTl) || !kurMakulMu(agTl,oncekiAgTl)){
+      console.warn('Kur önerisi: şüpheli sıçrama tespit edildi, öneri gösterilmiyor', {usdtl,auTl,agTl,oncekiUsdtl,oncekiAuTl,oncekiAgTl})
+      return
+    }
+    kurOneriGoster(usdtl,auTl,agTl)
+    console.log('Kur önerisi forma dolduruldu (henüz kaydedilmedi) ✓')
+  }).catch(function(err){
+    console.warn('Kur önerisi alınamadı:', err)
+  })
+}
+
+function kurOneriGoster(usdtl,auTl,agTl){
+  var uEl=document.getElementById('k-usdtl'), aEl=document.getElementById('k-au-tl'), gEl=document.getElementById('k-ag-tl')
+  if(!uEl||!aEl||!gEl) return
+  uEl.value=usdtl.toFixed(2)
+  aEl.value=auTl.toFixed(2)
+  gEl.value=agTl.toFixed(3)
+  syncKurTL()
+  ;[uEl,aEl,gEl].forEach(function(el){ el.classList.add('highlight') })
+  var not=document.getElementById('kur-oneri-not')
+  if(not) not.style.display=''
+  toast('Güncel piyasa kuru forma dolduruldu — kontrol edip "Kurları Kaydet"e basmanız gerekiyor')
 }
 
 // ══════════════════════ FİYAT MODU ══════════════════════
