@@ -181,7 +181,6 @@ tbody tr:hover td{background:var(--gold-lt)}
 .login-label{display:block;font-size:11px;color:#7A6E64;text-align:left;margin-bottom:5px;letter-spacing:.04em}
 .login-input{width:100%;padding:11px 14px;background:#1A1612;border:1px solid #3A3428;border-radius:8px;color:#E8D5A0;font-family:'DM Mono',monospace;font-size:15px;text-align:center;letter-spacing:.15em;outline:none;transition:border-color .15s}
 .login-input:focus{border-color:#DAA520;box-shadow:0 0 0 3px rgba(218,165,32,.15)}
-.login-input-email{font-family:'DM Sans',sans-serif;font-size:14px;text-align:left;letter-spacing:normal}
 .login-btn{width:100%;margin-top:18px;padding:12px;background:#B8860B;color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s}
 .login-btn:hover{background:#8B6508}
 .login-err{color:#E88A7A;font-size:12px;margin-top:10px;min-height:18px}
@@ -272,10 +271,8 @@ tbody tr:hover td{background:var(--gold-lt)}
   <div class="login-box">
     <div class="login-logo">✦ Altın &amp; Gümüş</div>
     <div class="login-sub">Yönetim Sistemi</div>
-    <label class="login-label">E-posta</label>
-    <input class="login-input login-input-email" type="email" id="lp-email" placeholder="ornek@eposta.com" autocomplete="username"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('lp').focus()}">
-    <label class="login-label" style="margin-top:12px">Şifre</label>
+    <input type="hidden" id="lp-email" value="yonetici@agsat-app.com">
+    <label class="login-label">Şifre</label>
     <input class="login-input" type="password" id="lp" placeholder="••••••••" maxlength="100" autocomplete="current-password"
       onkeydown="if(event.key==='Enter'){event.preventDefault();girisYap()}">
     <button class="login-btn" id="lb" type="button" onclick="girisYap()">Giriş Yap</button>
