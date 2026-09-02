@@ -194,6 +194,7 @@ tbody tr:hover td{background:var(--gold-lt)}
 .hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
 .hamburger.open span:nth-child(2){opacity:0;transform:scaleX(0)}
 .hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.hamburger.open{display:none}
 .mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:49}
 .mob-overlay.open{display:block}
 /* Sidebar kapat düğmesi (mobil içinde) */
@@ -207,12 +208,17 @@ tbody tr:hover td{background:var(--gold-lt)}
   .sidebar.mob-open{transform:translateX(0)}
   .sb-close{display:block}
   .main{margin-left:0;padding:12px 10px;padding-top:56px;max-width:100vw;overflow-x:hidden}
-  .settings-btn{bottom:12px;right:12px;font-size:11px;padding:6px 10px}
+  .settings-btn{bottom:12px;right:12px;font-size:16px;padding:9px;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .settings-btn-lbl{display:none}
   /* Grid'leri tek sütuna düşür */
   .g2,.g3,.g4{grid-template-columns:1fr!important}
   /* İşlem sayfasındaki büyük iki sütunlu layout */
   [style*="grid-template-columns:1fr 380px"]{grid-template-columns:1fr!important}
   [style*="grid-template-columns:1fr 370px"]{grid-template-columns:1fr!important}
+  /* JS ile üretilen rapor/detay kutularındaki çoklu sütunlar (cari detay, rapor metrikleri) */
+  [style*="grid-template-columns:repeat(3,1fr)"],
+  [style*="grid-template-columns:repeat(4,1fr)"],
+  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
   /* Tablo overflow — yatay kaydırma */
   .card{padding:12px 10px;overflow:hidden}
   .card > div[style*="overflow-x"],
@@ -238,6 +244,9 @@ tbody tr:hover td{background:var(--gold-lt)}
   .btn-tip{font-size:12px;padding:8px 4px}
   /* İşlem formu grid */
   .isc-box .g2{grid-template-columns:1fr}
+  /* Ödeme kalemi satırı — dar ekranda 2x2 */
+  .odeme-satir{grid-template-columns:1fr 1fr!important;row-gap:8px}
+  .odeme-satir-del{justify-self:end}
 }
 /* Tablo wrapper — her zaman scroll */
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
@@ -264,7 +273,7 @@ tbody tr:hover td{background:var(--gold-lt)}
     <button class="login-btn" id="lb" type="button" onclick="
       var p=document.getElementById('lp').value;
       var e=document.getElementById('le');
-      var k=localStorage.getItem('ag_pw')||'1234';
+      var k='1234'; try{ k=localStorage.getItem('ag_pw')||'1234' }catch(err){ k='1234' }
       if(!p){e.textContent='Şifre giriniz.';return;}
       if(p===k){
         var lo=document.getElementById('lo');lo.style.cssText='display:none!important;pointer-events:none!important;visibility:hidden!important;position:relative;z-index:-1';
@@ -288,16 +297,6 @@ tbody tr:hover td{background:var(--gold-lt)}
     <div class="login-hint">Varsayılan şifre: <strong style="color:#9A8060">1234</strong></div>
   </div>
 </div>
-    <div class="login-sub">Yönetim Sistemi</div>
-    <label class="login-label">Şifre</label>
-    <input class="login-input" type="password" id="login-pass" placeholder="••••••••" maxlength="20"
-      onkeydown="if(event.key==='Enter')loginCheck()">
-    <button class="login-btn" onclick="loginCheck()">Giriş Yap</button>
-    <div class="login-err" id="login-err"></div>
-    <div class="login-hint">Varsayılan şifre: <strong style="color:#5A4E44">1234</strong></div>
-  </div>
-</div>
-
 
 
 <!-- ŞİFRE DEĞİŞTİR MODAL -->
@@ -371,7 +370,7 @@ tbody tr:hover td{background:var(--gold-lt)}
   </div>
 </div>
 
-<button class="settings-btn" onclick="openModal('modal-sifre')">⚙ Şifre Değiştir</button>
+<button class="settings-btn" onclick="openModal('modal-sifre')">⚙ <span class="settings-btn-lbl">Şifre Değiştir</span></button>
 
 
 <!-- Hamburger menü butonu (mobil) -->
@@ -898,16 +897,20 @@ var save = () => {
     LS.set('kur_v3',KUR); LS.set('urunler_v3',URUNLER)
     LS.set('cariler_v3',CARILER); LS.set('islemler_v3',ISLEMLER)
     LS.set('odemeler_v3',ODEMELER); LS.set('id_ctr_v3',ID_CTR)
-    // Firestore'a yaz — sadece db hazırsa
-    if(db){
+  } catch(e){ console.warn('save hatası (localStorage):', e) }
+  // Firestore'a yaz — sadece db hazırsa. localStorage başarısız olsa bile
+  // (ör. dosya doğrudan file:// ile açıldığında bazı tarayıcılar engelliyor)
+  // bulut kaydı yine de denenmeli.
+  if(db){
+    try {
       db.collection('ag_data').doc('kur').set({data:JSON.stringify(KUR)}).catch(()=>{})
       db.collection('ag_data').doc('urunler').set({data:JSON.stringify(URUNLER)}).catch(()=>{})
       db.collection('ag_data').doc('cariler').set({data:JSON.stringify(CARILER)}).catch(()=>{})
       db.collection('ag_data').doc('islemler').set({data:JSON.stringify(ISLEMLER)}).catch(()=>{})
       db.collection('ag_data').doc('odemeler').set({data:JSON.stringify(ODEMELER)}).catch(()=>{})
       db.collection('ag_data').doc('id_ctr').set({data:JSON.stringify(ID_CTR)}).catch(()=>{})
-    }
-  } catch(e){ console.warn('save hatası:', e) }
+    } catch(e){ console.warn('save hatası (Firestore):', e) }
+  }
 }
 
 var nextId=k=>{const id=ID_CTR[k]++;save();return id}
@@ -2356,11 +2359,17 @@ function sifreDegistirFn(){
   var eski  = document.getElementById('s-eski').value
   var yeni  = document.getElementById('s-yeni').value
   var yeni2 = document.getElementById('s-yeni2').value
-  var mevcutSifre = localStorage.getItem('ag_pw') || '1234'
+  var mevcutSifre = '1234'
+  try{ mevcutSifre = localStorage.getItem('ag_pw') || '1234' }catch(err){ mevcutSifre = '1234' }
   if(eski !== mevcutSifre){ toast('Mevcut şifre yanlış!','err'); return }
   if(yeni.length < 4){ toast('Yeni şifre en az 4 karakter!','err'); return }
   if(yeni !== yeni2){ toast('Şifreler eşleşmiyor!','err'); return }
-  localStorage.setItem('ag_pw', yeni)
+  try{
+    localStorage.setItem('ag_pw', yeni)
+  }catch(err){
+    toast('Şifre bu tarayıcıda kaydedilemedi (yerel depolama engelli)','err')
+    return
+  }
   closeModal('modal-sifre')
   document.getElementById('s-eski').value = ''
   document.getElementById('s-yeni').value = ''
@@ -2385,19 +2394,6 @@ function syncAyar(mod){
   if(src) document.getElementById('i-ayar').value=src
 }
 
-
-function sifreDegistir(){
-  const eski  = document.getElementById('s-eski').value
-  const yeni  = document.getElementById('s-yeni').value
-  const yeni2 = document.getElementById('s-yeni2').value
-  if(eski !== getSifre()){ toast('Mevcut şifre yanlış!','err'); return }
-  if(yeni.length < 4)    { toast('Yeni şifre en az 4 karakter olmalı!','err'); return }
-  if(yeni !== yeni2)     { toast('Yeni şifreler eşleşmiyor!','err'); return }
-  LS.set(SIFRE_KEY, yeni)
-  closeModal('modal-sifre')
-  ;['s-eski','s-yeni','s-yeni2'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value='' })
-  toast('Şifre başarıyla değiştirildi ✓')
-}
 
 
 </script>
