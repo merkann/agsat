@@ -1502,7 +1502,8 @@ function cariBakiyeHesapla(id){
     kalemler.forEach(function(k){
       var tl=k.tutarTL||0
       var usd=k.birim==='usd'?(k.miktar||0):tl/KUR.usdtl
-      var gr=(k.birim==='gr-au'||k.birim==='adet-au')?(k.miktar||0):0
+      // adet-au (parça sayısı) gram değildir — 1 adet 1 gram sayılamaz, dahil edilmiyor
+      var gr=(k.birim==='gr-au')?(k.miktar||0):0
       if(o.yon==='tahsilat'){topTahsilatTL+=tl;topTahsilatUSD+=usd;topTahsilatGR+=gr}
       else{topOdemeTL+=tl;topOdemeUSD+=usd;topOdemeGR+=gr}
     })
@@ -1702,66 +1703,6 @@ function updateOdemeMetrics(){
   s('top-tahsilat',fmt(tahsilat)+' ₺');s('top-odeme',fmt(odeme)+' ₺');s('net-bakiye',fmt(net)+' ₺',net>=0?'text-grn':'text-red')
 }
 
-// Modal: birim değişince kur/spot alanlarını göster/gizle
-function odemeModalBirimChange(){
-  const birim = document.getElementById('o-birim').value
-  const kurArea = document.getElementById('o-karsılik-area')
-  const spotArea = document.getElementById('o-spotgr-area')
-  const miktarLbl = document.getElementById('o-miktar-lbl')
-  const spotLbl = document.getElementById('o-spot-lbl')
-  // Kuru her zaman al
-  const kEl = document.getElementById('o-kur')
-  if(kEl && !kEl.value) kEl.value = KUR.usdtl
-  if(birim === 'tl'){
-    kurArea.style.display = 'none'
-    miktarLbl.textContent = 'Tutar (TL)'
-  } else if(birim === 'usd'){
-    kurArea.style.display = ''
-    spotArea.style.display = 'none'
-    miktarLbl.textContent = 'Tutar (USD)'
-    if(kEl) kEl.value = KUR.usdtl
-  } else if(birim === 'gr-au'){
-    kurArea.style.display = ''
-    spotArea.style.display = ''
-    miktarLbl.textContent = 'Miktar (Gram Altın)'
-    spotLbl.textContent = 'Altın Spot (TL/gr)'
-    const sEl = document.getElementById('o-spot')
-    if(sEl) sEl.value = KUR.au_tl
-    if(kEl) kEl.value = KUR.usdtl
-  } else if(birim === 'gr-ag'){
-    kurArea.style.display = ''
-    spotArea.style.display = ''
-    miktarLbl.textContent = 'Miktar (Gram Gümüş)'
-    spotLbl.textContent = 'Gümüş Spot (TL/gr)'
-    const sEl = document.getElementById('o-spot')
-    if(sEl) sEl.value = KUR.ag_tl
-    if(kEl) kEl.value = KUR.usdtl
-  } else if(birim.startsWith('adet')){
-    kurArea.style.display = ''
-    spotArea.style.display = ''
-    const isAu = birim === 'adet-au'
-    miktarLbl.textContent = 'Adet (' + (isAu ? 'Altın' : 'Gümüş') + ')'
-    spotLbl.textContent = (isAu ? 'Altın' : 'Gümüş') + ' Birim Fiyat (TL/adet)'
-    const sEl = document.getElementById('o-spot')
-    if(sEl) sEl.value = isAu ? KUR.au_tl : KUR.ag_tl
-    if(kEl) kEl.value = KUR.usdtl
-  }
-  odemeModalHesapla()
-}
-
-function odemeModalHesapla(){
-  const birim = document.getElementById('o-birim').value
-  const miktar = parseFloat(document.getElementById('o-miktar').value) || 0
-  const kur = parseFloat(document.getElementById('o-kur')?.value) || KUR.usdtl
-  const spot = parseFloat(document.getElementById('o-spot')?.value) || 0
-  let tlKarsilik = 0
-  if(birim === 'tl') tlKarsilik = miktar
-  else if(birim === 'usd') tlKarsilik = miktar * kur
-  else tlKarsilik = miktar * spot  // gr veya adet × TL fiyatı
-  const tutarEl = document.getElementById('o-tutar')
-  if(tutarEl && miktar) tutarEl.value = tlKarsilik.toFixed(2)
-}
-
 function odemeKaydet(){
   var cariId=parseInt(document.getElementById('o-cari').value)
   var cari=CARILER.find(function(c){return c.id===cariId})
@@ -1814,8 +1755,11 @@ function odemeKalemBirimTL(birim,miktar){
   if(birim==='usd')     return miktar*KUR.usdtl
   if(birim==='gr-au')   return miktar*KUR.au_tl
   if(birim==='gr-ag')   return miktar*KUR.ag_tl
-  if(birim==='adet-au') return miktar*KUR.au_tl
-  if(birim==='adet-ag') return miktar*KUR.ag_tl
+  // adet-au / adet-ag: "adet" hangi ürün/sikke olduğunu belirtmiyor (çeyrek,
+  // yarım, tam, cumhuriyet... hepsi farklı ağırlıkta) — gram fiyatıyla çarpmak
+  // 1 adeti 1 gram saymak olurdu, bu yanlış olur. Otomatik hesaplanamaz;
+  // null döner, kullanıcı TL karşılığını kendisi girer.
+  if(birim==='adet-au' || birim==='adet-ag') return null
   return miktar
 }
 
@@ -1826,7 +1770,13 @@ function odemeKalemGuncelle(idx){
   if(!birimEl||!miktarEl||!tlEl)return
   var birim=birimEl.value, miktar=parseFloat(miktarEl.value)||0
   var tl=odemeKalemBirimTL(birim,miktar)
-  tlEl.value=tl.toFixed(2)
+  if(tl===null){
+    // Adet altın/gümüş: otomatik karşılık hesaplanamıyor — alandaki TL değerine
+    // dokunma, kullanıcı kendi girsin (bkz. odemeKalemBirimTL yorumu)
+    tl=parseFloat(tlEl.value)||0
+  } else {
+    tlEl.value=tl.toFixed(2)
+  }
   if(odemeKalemleri[idx])odemeKalemleri[idx]={birim,miktar,tutarTL:tl}
   odemeToplamGuncelle()
 }
