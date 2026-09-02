@@ -433,6 +433,9 @@ tbody tr:hover td{background:var(--gold-lt)}
   <div class="g2" style="gap:20px">
     <div class="card">
       <h3 class="card-title">Kur Girişi</h3>
+      <div id="kur-oneri-not" style="display:none;font-size:11px;color:var(--gold);background:var(--gold-lt);border:1px solid var(--gold-bd);border-radius:var(--r);padding:8px 10px;margin-bottom:12px">
+        ◈ Güncel piyasa kuru öneri olarak dolduruldu — kontrol edin ve uygulamak için "Kurları Kaydet"e basın.
+      </div>
       <div class="tab-pills">
         <button class="tab-pill active" id="tp-tl" onclick="setKurMode('tl')">TL Bazlı Giriş</button>
         <button class="tab-pill" id="tp-usd" onclick="setKurMode('usd')">USD Bazlı Giriş</button>
@@ -1040,6 +1043,9 @@ function kurKaydet(){
   if(!usdtl||!auTl||!agTl){toast('Tüm kur alanlarını doldurun!','err');return}
   KUR={usdtl,au_tl:auTl,ag_tl:agTl,au_usd:auTl/usdtl,ag_usd:agTl/usdtl,tarih:today(),guncellemeZamani:Date.now(),otomatik:false}
   save();updateKurDisplay();toast('Kurlar kaydedildi ✓')
+  // Öneri vurgusu varsa temizle — artık kullanıcı onaylayıp kaydetti
+  ;['k-usdtl','k-au-tl','k-ag-tl'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.remove('highlight')})
+  var not=document.getElementById('kur-oneri-not'); if(not) not.style.display='none'
   // Tüm sayfaları kur değişimiyle güncelle (anlık hesaplama)
   renderIslemler(); if(curPage==='rapor') renderRapor()
 }
@@ -1092,6 +1098,11 @@ function kurMakulMu(yeni, eski){
   return degisim <= KUR_MAX_SIGMA
 }
 
+// ÖNEMLİ: bu fonksiyon KUR'u veya kaydedilen veriyi DEĞİŞTİRMEZ — sadece piyasa
+// kurunu çekip "Kur Girişi" formuna öneri olarak doldurur. Gerçek fiyatlandırmaya
+// yansıması için kullanıcının yine de "Kurları Kaydet"e basması gerekir. Bu bilinçli
+// bir tercih: kur, babanın kendi kaynağına/yöntemine göre belirlediği bir değer
+// olabilir — uygulama onun onayı olmadan sessizce farklı bir rakam uygulamamalı.
 function otomatikKurGuncelle(){
   if(!kurGuncellemeGerekliMi()) return
   var oncekiUsdtl=KUR&&KUR.usdtl, oncekiAuTl=KUR&&KUR.au_tl, oncekiAgTl=KUR&&KUR.ag_tl
@@ -1112,18 +1123,27 @@ function otomatikKurGuncelle(){
     var auTl = auUsdGr * usdtl
     var agTl = agUsdGr * usdtl
     if(!kurMakulMu(usdtl,oncekiUsdtl) || !kurMakulMu(auTl,oncekiAuTl) || !kurMakulMu(agTl,oncekiAgTl)){
-      console.warn('Otomatik kur güncelleme: şüpheli sıçrama tespit edildi, mevcut kur korunuyor', {usdtl,auTl,agTl,oncekiUsdtl,oncekiAuTl,oncekiAgTl})
+      console.warn('Kur önerisi: şüpheli sıçrama tespit edildi, öneri gösterilmiyor', {usdtl,auTl,agTl,oncekiUsdtl,oncekiAuTl,oncekiAgTl})
       return
     }
-    KUR={usdtl:usdtl, au_tl:auTl, ag_tl:agTl, au_usd:auUsdGr, ag_usd:agUsdGr, tarih:today(), guncellemeZamani:Date.now(), otomatik:true}
-    save()
-    updateKurDisplay()
-    renderIslemler()
-    if(curPage==='rapor' && typeof renderRapor==='function') renderRapor()
-    console.log('Kur otomatik güncellendi ✓')
+    kurOneriGoster(usdtl,auTl,agTl)
+    console.log('Kur önerisi forma dolduruldu (henüz kaydedilmedi) ✓')
   }).catch(function(err){
-    console.warn('Otomatik kur güncelleme başarısız, mevcut kur korunuyor:', err)
+    console.warn('Kur önerisi alınamadı:', err)
   })
+}
+
+function kurOneriGoster(usdtl,auTl,agTl){
+  var uEl=document.getElementById('k-usdtl'), aEl=document.getElementById('k-au-tl'), gEl=document.getElementById('k-ag-tl')
+  if(!uEl||!aEl||!gEl) return
+  uEl.value=usdtl.toFixed(2)
+  aEl.value=auTl.toFixed(2)
+  gEl.value=agTl.toFixed(3)
+  syncKurTL()
+  ;[uEl,aEl,gEl].forEach(function(el){ el.classList.add('highlight') })
+  var not=document.getElementById('kur-oneri-not')
+  if(not) not.style.display=''
+  toast('Güncel piyasa kuru forma dolduruldu — kontrol edip "Kurları Kaydet"e basmanız gerekiyor')
 }
 
 // ══════════════════════ FİYAT MODU ══════════════════════
