@@ -17,16 +17,20 @@
   window.addEventListener('load', function(){
     loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js', function(){
       loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js', function(){
+      loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js', function(){
         try {
           var cfg={apiKey:"AIzaSyDRDoFEg7CfI78LIh5hrCQw_SW5Wm_I2SU",authDomain:"altin-gumus.firebaseapp.com",
             projectId:"altin-gumus",storageBucket:"altin-gumus.firebasestorage.app",
             messagingSenderId:"633885411247",appId:"1:633885411247:web:bdb711fdfd9b131930915a"}
           if(!firebase.apps.length) firebase.initializeApp(cfg)
           window._db = firebase.firestore()
-          // Ana JS'deki db değişkenini güncelle
+          window._auth = firebase.auth()
+          // Ana JS'deki db/auth değişkenlerini güncelle
           if(typeof window.setFirestoreDb === 'function') window.setFirestoreDb(window._db)
+          if(typeof window.setFirebaseAuth === 'function') window.setFirebaseAuth(window._auth)
           console.log('Firebase hazır')
         } catch(e){ console.warn('Firebase init hatası:', e) }
+      })
       })
     })
   })
@@ -177,6 +181,7 @@ tbody tr:hover td{background:var(--gold-lt)}
 .login-label{display:block;font-size:11px;color:#7A6E64;text-align:left;margin-bottom:5px;letter-spacing:.04em}
 .login-input{width:100%;padding:11px 14px;background:#1A1612;border:1px solid #3A3428;border-radius:8px;color:#E8D5A0;font-family:'DM Mono',monospace;font-size:15px;text-align:center;letter-spacing:.15em;outline:none;transition:border-color .15s}
 .login-input:focus{border-color:#DAA520;box-shadow:0 0 0 3px rgba(218,165,32,.15)}
+.login-input-email{font-family:'DM Sans',sans-serif;font-size:14px;text-align:left;letter-spacing:normal}
 .login-btn{width:100%;margin-top:18px;padding:12px;background:#B8860B;color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s}
 .login-btn:hover{background:#8B6508}
 .login-err{color:#E88A7A;font-size:12px;margin-top:10px;min-height:18px}
@@ -267,34 +272,14 @@ tbody tr:hover td{background:var(--gold-lt)}
   <div class="login-box">
     <div class="login-logo">✦ Altın &amp; Gümüş</div>
     <div class="login-sub">Yönetim Sistemi</div>
-    <label class="login-label">Şifre</label>
-    <input class="login-input" type="password" id="lp" placeholder="••••••••" maxlength="30"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('lb').click()}">
-    <button class="login-btn" id="lb" type="button" onclick="
-      var p=document.getElementById('lp').value;
-      var e=document.getElementById('le');
-      var k='1234'; try{ k=localStorage.getItem('ag_pw')||'1234' }catch(err){ k='1234' }
-      if(!p){e.textContent='Şifre giriniz.';return;}
-      if(p===k){
-        var lo=document.getElementById('lo');lo.style.cssText='display:none!important;pointer-events:none!important;visibility:hidden!important;position:relative;z-index:-1';
-        document.getElementById('lp').value='';
-        e.textContent='';
-        // Uygulama başlat
-        if(typeof appStart==='function'){
-          appStart()
-        } else {
-          // Fallback: appStart yoksa direkt çalıştır
-          if(typeof updateKurDisplay==='function') updateKurDisplay()
-          if(typeof renderIslemler==='function') renderIslemler()
-        }
-      }else{
-        e.textContent='Hatalı şifre.';
-        document.getElementById('lp').value='';
-        document.getElementById('lp').focus();
-      }
-    ">Giriş Yap</button>
+    <label class="login-label">E-posta</label>
+    <input class="login-input login-input-email" type="email" id="lp-email" placeholder="ornek@eposta.com" autocomplete="username"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('lp').focus()}">
+    <label class="login-label" style="margin-top:12px">Şifre</label>
+    <input class="login-input" type="password" id="lp" placeholder="••••••••" maxlength="100" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();girisYap()}">
+    <button class="login-btn" id="lb" type="button" onclick="girisYap()">Giriş Yap</button>
     <div class="login-err" id="le"></div>
-    <div class="login-hint">Varsayılan şifre: <strong style="color:#9A8060">1234</strong></div>
   </div>
 </div>
 
@@ -406,7 +391,7 @@ tbody tr:hover td{background:var(--gold-lt)}
     <button class="nav-item" onclick="goPage('odemeler',this)"><span class="nav-icon">◇</span>Ödemeler</button>
     <button class="nav-item" onclick="goPage('rapor',this)"><span class="nav-icon">▦</span>Raporlar</button>
   </nav>
-  <div class="sb-footer">v3.0 · localStorage</div>
+  <div class="sb-footer">v3.0 · <span id="sb-user-email"></span> · <a href="#" onclick="cikisYap();return false" style="color:#7A6E64;text-decoration:underline;cursor:pointer">Çıkış Yap</a></div>
 </aside>
 
 <main class="main">
@@ -879,6 +864,21 @@ tbody tr:hover td{background:var(--gold-lt)}
 var db = null
 // Dinamik script db'yi buraya set eder
 window.setFirestoreDb = function(firestoreDb){ db = firestoreDb }
+
+var auth = null
+// Dinamik script auth'u buraya set eder; hazır olunca oturum durumunu dinlemeye başla
+window.setFirebaseAuth = function(a){
+  auth = a
+  auth.onAuthStateChanged(function(user){
+    if(user){
+      var lo=document.getElementById('lo')
+      if(lo) lo.style.cssText='display:none!important;pointer-events:none!important;visibility:hidden!important;position:relative;z-index:-1'
+      var lbl=document.getElementById('sb-user-email')
+      if(lbl) lbl.textContent = user.email || ''
+      if(typeof appStart==='function') appStart()
+    }
+  })
+}
 
 // ══════════════════════ VERİ KATMANI ══════════════════════
 // localStorage — hızlı okuma için önbellek
@@ -2355,26 +2355,60 @@ function yazdir(secId){
   })
 }
 
+function girisYap(){
+  var email = document.getElementById('lp-email').value.trim()
+  var pass  = document.getElementById('lp').value
+  var e = document.getElementById('le')
+  if(!auth){ e.textContent='Sistem hazırlanıyor, birkaç saniye sonra tekrar deneyin.'; return }
+  if(!email || !pass){ e.textContent='E-posta ve şifre giriniz.'; return }
+  e.textContent='Giriş yapılıyor...'
+  auth.signInWithEmailAndPassword(email, pass).then(function(){
+    document.getElementById('lp').value=''
+    e.textContent=''
+    // login-overlay'i gizleme ve appStart() çağrısı setFirebaseAuth içindeki onAuthStateChanged'de yapılıyor
+  }).catch(function(err){
+    var msg='Giriş başarısız.'
+    if(err.code==='auth/wrong-password' || err.code==='auth/invalid-credential') msg='Hatalı e-posta veya şifre.'
+    else if(err.code==='auth/user-not-found') msg='Bu e-posta ile kayıtlı kullanıcı yok.'
+    else if(err.code==='auth/invalid-email') msg='Geçersiz e-posta adresi.'
+    else if(err.code==='auth/too-many-requests') msg='Çok fazla deneme yapıldı, biraz sonra tekrar deneyin.'
+    else if(err.code==='auth/network-request-failed') msg='İnternet bağlantısı sorunu.'
+    else if(err.code==='auth/operation-not-allowed' || err.code==='auth/configuration-not-found') msg='Giriş sistemi henüz Firebase Console\'da etkinleştirilmemiş.'
+    e.textContent=msg
+    document.getElementById('lp').value=''
+  })
+}
+
+function cikisYap(){
+  if(auth) auth.signOut()
+  location.reload()
+}
+
 function sifreDegistirFn(){
   var eski  = document.getElementById('s-eski').value
   var yeni  = document.getElementById('s-yeni').value
   var yeni2 = document.getElementById('s-yeni2').value
-  var mevcutSifre = '1234'
-  try{ mevcutSifre = localStorage.getItem('ag_pw') || '1234' }catch(err){ mevcutSifre = '1234' }
-  if(eski !== mevcutSifre){ toast('Mevcut şifre yanlış!','err'); return }
-  if(yeni.length < 4){ toast('Yeni şifre en az 4 karakter!','err'); return }
+  if(!auth || !auth.currentUser){ toast('Oturum bulunamadı, tekrar giriş yapın.','err'); return }
+  if(!eski){ toast('Mevcut şifrenizi girin!','err'); return }
+  if(yeni.length < 6){ toast('Yeni şifre en az 6 karakter!','err'); return }
   if(yeni !== yeni2){ toast('Şifreler eşleşmiyor!','err'); return }
-  try{
-    localStorage.setItem('ag_pw', yeni)
-  }catch(err){
-    toast('Şifre bu tarayıcıda kaydedilemedi (yerel depolama engelli)','err')
-    return
-  }
-  closeModal('modal-sifre')
-  document.getElementById('s-eski').value = ''
-  document.getElementById('s-yeni').value = ''
-  document.getElementById('s-yeni2').value = ''
-  toast('Şifre değiştirildi ✓')
+  var user = auth.currentUser
+  var cred = firebase.auth.EmailAuthProvider.credential(user.email, eski)
+  user.reauthenticateWithCredential(cred).then(function(){
+    return user.updatePassword(yeni)
+  }).then(function(){
+    closeModal('modal-sifre')
+    document.getElementById('s-eski').value = ''
+    document.getElementById('s-yeni').value = ''
+    document.getElementById('s-yeni2').value = ''
+    toast('Şifre değiştirildi ✓')
+  }).catch(function(err){
+    var msg='Şifre değiştirilemedi.'
+    if(err.code==='auth/wrong-password' || err.code==='auth/invalid-credential') msg='Mevcut şifre yanlış!'
+    else if(err.code==='auth/weak-password') msg='Yeni şifre çok zayıf.'
+    else if(err.code==='auth/requires-recent-login') msg='Güvenlik için tekrar giriş yapıp deneyin.'
+    toast(msg,'err')
+  })
 }
 
 function appStart(){
