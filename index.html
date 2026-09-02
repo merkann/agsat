@@ -1507,18 +1507,22 @@ function cariBakiyeHesapla(id){
       else{topOdemeTL+=tl;topOdemeUSD+=usd;topOdemeGR+=gr}
     })
   })
-  // NOT: Net Bakiye formülü babanın onayı bekleniyor — bilinçli olarak eski
-  // (mevcut, canlıdaki) haliyle bırakıldı. Ayrı bir dalda (bakiye-ve-veri-
-  // butunlugu-duzeltmeleri) önerilen düzeltme onaylanınca buraya taşınacak.
-  var netTL=topSatimTL-topAlimTL+topTahsilatTL-topOdemeTL
-  var netUSD=topSatimUSD-topAlimUSD+topTahsilatUSD-topOdemeUSD
-  var netGR=topSatimGR-topAlimGR+topTahsilatGR-topOdemeGR
+  // Alım bakiyesi: + ise biz tedarikçiye borçluyuz (alınan - ödenen)
+  // Satım bakiyesi: + ise cari bize borçlu (satılan - tahsil edilen)
+  // Net bakiye bu ikisinin FARKI olmalı — toplamı değil, yoksa ödenmiş/tahsil edilmiş
+  // tutarlar bakiyeyi azaltacağına ikiye katlar (onaylandı, bkz. commit mesajı)
+  var alimBakiyeTL=topAlimTL-topOdemeTL, satimBakiyeTL=topSatimTL-topTahsilatTL
+  var alimBakiyeUSD=topAlimUSD-topOdemeUSD, satimBakiyeUSD=topSatimUSD-topTahsilatUSD
+  var alimBakiyeGR=topAlimGR-topOdemeGR, satimBakiyeGR=topSatimGR-topTahsilatGR
+  var netTL=satimBakiyeTL-alimBakiyeTL
+  var netUSD=satimBakiyeUSD-alimBakiyeUSD
+  var netGR=satimBakiyeGR-alimBakiyeGR
   return {
     topAlimTL,topSatimTL,topAlimUSD,topSatimUSD,topAlimGR,topSatimGR,
     topOdemeTL,topTahsilatTL,topOdemeUSD,topTahsilatUSD,topOdemeGR,topTahsilatGR,
     netTL,netUSD,netGR,
     topAlim:topAlimTL,topSatim:topSatimTL,topTahsilat:topTahsilatTL,topOdeme:topOdemeTL,
-    alimBakiye:topAlimTL-topOdemeTL,satimBakiye:topSatimTL-topTahsilatTL,netBakiye:netTL
+    alimBakiye:alimBakiyeTL,satimBakiye:satimBakiyeTL,netBakiye:netTL
   }
 }
 
