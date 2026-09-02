@@ -25,6 +25,8 @@
           if(!firebase.apps.length) firebase.initializeApp(cfg)
           window._db = firebase.firestore()
           window._auth = firebase.auth()
+          // Oturumu bu cihazda kalıcı yap — bir kez giriş yapınca bir daha şifre sormasın
+          window._auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(e){ console.warn('Kalıcılık ayarlanamadı:', e) })
           // Ana JS'deki db/auth değişkenlerini güncelle
           if(typeof window.setFirestoreDb === 'function') window.setFirestoreDb(window._db)
           if(typeof window.setFirebaseAuth === 'function') window.setFirebaseAuth(window._auth)
