@@ -1435,15 +1435,22 @@ function cariBakiyeHesapla(id){
       else{topOdemeTL+=tl;topOdemeUSD+=usd;topOdemeGR+=gr}
     })
   })
-  var netTL=topSatimTL-topAlimTL+topTahsilatTL-topOdemeTL
-  var netUSD=topSatimUSD-topAlimUSD+topTahsilatUSD-topOdemeUSD
-  var netGR=topSatimGR-topAlimGR+topTahsilatGR-topOdemeGR
+  // Alım bakiyesi: + ise biz tedarikçiye borçluyuz (alınan - ödenen)
+  // Satım bakiyesi: + ise cari bize borçlu (satılan - tahsil edilen)
+  // Net bakiye bu ikisinin FARKI olmalı — toplamı değil, yoksa ödenmiş/tahsil edilmiş
+  // tutarlar bakiyeyi azaltacağına ikiye katlar (bkz. commit mesajı)
+  var alimBakiyeTL=topAlimTL-topOdemeTL, satimBakiyeTL=topSatimTL-topTahsilatTL
+  var alimBakiyeUSD=topAlimUSD-topOdemeUSD, satimBakiyeUSD=topSatimUSD-topTahsilatUSD
+  var alimBakiyeGR=topAlimGR-topOdemeGR, satimBakiyeGR=topSatimGR-topTahsilatGR
+  var netTL=satimBakiyeTL-alimBakiyeTL
+  var netUSD=satimBakiyeUSD-alimBakiyeUSD
+  var netGR=satimBakiyeGR-alimBakiyeGR
   return {
     topAlimTL,topSatimTL,topAlimUSD,topSatimUSD,topAlimGR,topSatimGR,
     topOdemeTL,topTahsilatTL,topOdemeUSD,topTahsilatUSD,topOdemeGR,topTahsilatGR,
     netTL,netUSD,netGR,
     topAlim:topAlimTL,topSatim:topSatimTL,topTahsilat:topTahsilatTL,topOdeme:topOdemeTL,
-    alimBakiye:topAlimTL-topOdemeTL,satimBakiye:topSatimTL-topTahsilatTL,netBakiye:netTL
+    alimBakiye:alimBakiyeTL,satimBakiye:satimBakiyeTL,netBakiye:netTL
   }
 }
 
@@ -1553,6 +1560,12 @@ function cariKaydet(){
 }
 
 function cariSil(id){
+  var islemSayisi=ISLEMLER.filter(function(i){return i.cariId===id}).length
+  var odemeSayisi=ODEMELER.filter(function(o){return o.cariId===id}).length
+  if(islemSayisi>0||odemeSayisi>0){
+    toast('Bu cariye ait '+islemSayisi+' işlem ve '+odemeSayisi+' ödeme kaydı var — silinemez. Önce o kayıtları silin ya da başka bir cariye taşıyın.','err')
+    return
+  }
   if(!confirm('Bu cariyi silmek istediğinize emin misiniz?'))return
   CARILER=CARILER.filter(c=>c.id!==id);save();renderCariler();toast('Cari silindi')
 }
@@ -1819,9 +1832,13 @@ function odemeDuzenle(id){
   document.getElementById('oe-tarih').value=o.tarih
   document.getElementById('oe-tutar').value=o.tutar
   document.getElementById('oe-yon').value=o.yon
-  document.getElementById('oe-birim').value=o.birim||'tl'
-  document.getElementById('oe-miktar').value=o.miktar||o.tutar
+  // Bu form tek kalem düzenler; 'karma' (çok kalemli) bir ödemeyse dropdown'da
+  // karşılığı yok — TL karşılığı (toplam tutar) üzerinden tek kalem gibi göster
+  const cokKalemli = !!(o.kalemler && o.kalemler.length>1)
+  document.getElementById('oe-birim').value=(!cokKalemli && o.birim && o.birim!=='karma')?o.birim:'tl'
+  document.getElementById('oe-miktar').value=cokKalemli?o.tutar:(o.miktar||o.tutar)
   document.getElementById('oe-aciklama').value=o.aciklama||''
+  if(cokKalemli) toast('Bu ödeme birden fazla kalemden oluşuyor; düzenlersen tek kaleme (TL karşılığı) indirilir','err')
   const sel=document.getElementById('oe-cari')
   sel.innerHTML='<option value="">Seçiniz...</option>'+CARILER.map(c=>'<option value="'+c.id+'" '+(c.id===o.cariId?'selected':'')+'>'+c.ad+'</option>').join('')
   openModal('modal-odeme-duzenle')
@@ -1852,6 +1869,10 @@ function odemeDuzenleKaydet(){
     tarih:document.getElementById('oe-tarih').value,
     cariId:yeniCariId, cariAd:yeniCari?.ad||eski.cariAd,
     tutar, yon, birim, miktar,
+    // Bu form tek kalem düzenliyor — eski çok kalemli (kalemler) kırılımını yeni
+    // tutarla eşleşecek tek kaleme indir. Yoksa bakiye hesapları (kalemler'i okur)
+    // ile liste görünümü (tutar'ı okur) birbirinden sapar.
+    kalemler:[{birim,miktar,tutarTL:tutar}],
     aciklama:document.getElementById('oe-aciklama').value
   }
   save()
@@ -1992,6 +2013,8 @@ function renderRapor(){
     <div style="font-size:11px;color:var(--txt3);margin-top:4px">${m.sub}</div>
   </div>`).join('')
 
+  // c.bakiye alan-kayıt sırasına göre bayat kalabilir — listeleme öncesi taze hesapla
+  CARILER.forEach(c=>{ c.bakiye=cariBakiyeHesapla(c.id).netTL })
   const borclu=[...CARILER].filter(c=>c.bakiye<0).sort((a,b)=>a.bakiye-b.bakiye)
   const alacakli=[...CARILER].filter(c=>c.bakiye>0).sort((a,b)=>b.bakiye-a.bakiye)
   const lH=(arr,fn)=>arr.length?arr.map(fn).join(''):'<p style="color:var(--txt3);font-size:13px">Yok</p>'
@@ -2291,6 +2314,7 @@ function excelTamRapor(){
     'İşçilik TL':i.iscTL,'Toplam TL':i.toplamTL,'USD':i.toplamUSD
   }))),'Alım-Satım')
   // Cariler
+  CARILER.forEach(c=>{ c.bakiye=cariBakiyeHesapla(c.id).netTL })
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(CARILER.map(c=>({
     'Ad':c.ad,'Tip':TIP_L[c.tip]||c.tip,'Telefon':c.tel||'','Bakiye TL':c.bakiye,'Toplam İşlem TL':c.toplamIslem
   }))),'Cariler')
@@ -2331,6 +2355,7 @@ function yazdir(secId){
     <td>${i.urunAciklama||i.not||'—'}</td>
   </tr>`}).join('')
   // CB tbody
+  CARILER.forEach(c=>{ c.bakiye=cariBakiyeHesapla(c.id).netTL })
   const cbt=document.getElementById('print-cb-tbody')
   if(cbt)cbt.innerHTML=CARILER.map(c=>`<tr>
     <td>${c.ad}</td><td>${TIP_L[c.tip]||c.tip}</td><td>${c.tel||'—'}</td>
